@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/api_service.dart';
+import 'services/push_notification_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'models/auth.dart';
@@ -12,13 +13,17 @@ void main() async {
   await initializeDateFormatting('pl_PL', null);
   final apiService = ApiService();
   final token = await apiService.getToken();
-  
+
+  // Init push notifications early so the plugin registers
+  await PushNotificationService().init(apiService);
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         Provider<ApiService>.value(value: apiService),
         ChangeNotifierProvider(create: (_) => AuthProvider(apiService, token)),
+        Provider<PushNotificationService>.value(value: PushNotificationService()),
       ],
       child: const SlaviaApp(),
     ),
@@ -64,6 +69,8 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _loadUser() async {
     try {
       _user = await _apiService.getMe();
+      // Ensure polling is running whenever we have an authenticated user
+      PushNotificationService().startPolling();
       notifyListeners();
     } catch (e) {
       logout();
@@ -81,6 +88,8 @@ class AuthProvider extends ChangeNotifier {
       await _apiService.login(username, password);
       _isAuthenticated = true;
       await _loadUser();
+      // Start polling for system notifications after login
+      PushNotificationService().startPolling();
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -89,6 +98,8 @@ class AuthProvider extends ChangeNotifier {
 
   void logout() {
     _apiService.setToken(null);
+    PushNotificationService().stopPolling();
+    PushNotificationService().clearSeenIds();
     _isAuthenticated = false;
     _user = null;
     notifyListeners();
