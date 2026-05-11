@@ -1,7 +1,17 @@
 # Buduje APK release i dołącza go do GitHub Release przy pushu tagu semver, np. v1.0.1
+#
+# Uruchomienie z release na GitHubie:
+# 1) Plik musi być na domyślnej gałęzi (np. main).
+# 2) Utwórz i WYPCHNIJ tag z prefiksem „v”, np.:
+#    git tag v1.0.1 && git push origin v1.0.1
+#    (tag bez „v” — np. 1.0.1 — NIE uruchomi tego workflow.)
+# 3) W repo: Settings → Actions → General — „Allow GitHub Actions” włączone.
+#
+# Ręczny test buildu (bez release): Actions → „Release APK” → Run workflow.
 name: Release APK
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v*.*.*'
@@ -27,7 +37,15 @@ jobs:
       - run: flutter pub get
       - run: flutter build apk --release
 
-      - name: Upload APK to release
+      - name: Upload APK as artifact (manual / debug)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload APK to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: build/app/outputs/flutter-apk/app-release.apk
