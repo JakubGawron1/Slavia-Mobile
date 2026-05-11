@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 
-
 class AuditLogScreen extends StatelessWidget {
   const AuditLogScreen({super.key});
 
@@ -24,23 +23,41 @@ class AuditLogScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final log = logs[index];
               return ListTile(
-                title: Text(log.action, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(
+                  log.action,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Aktor: ${log.actorUsername ?? "System"} (${log.actorRole ?? ""})'),
-                    Text('Data: ${log.createdAt.substring(0, 16).replaceFirst("T", " ")}', style: const TextStyle(fontSize: 10)),
+                    Text(
+                      'Aktor: ${log.actorUsername ?? "System"} (${log.actorRole ?? ""})',
+                    ),
+                    Text(
+                      'Data: ${log.createdAt.substring(0, 16).replaceFirst("T", " ")}',
+                      style: const TextStyle(fontSize: 10),
+                    ),
                   ],
                 ),
-                trailing: Text(log.category.toUpperCase(), style: const TextStyle(fontSize: 10, color: Colors.blue)),
+                trailing: Text(
+                  log.category.toUpperCase(),
+                  style: const TextStyle(fontSize: 10, color: Colors.blue),
+                ),
                 onTap: () {
                   if (log.details != null) {
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
                         title: const Text('Szczegóły'),
-                        content: SingleChildScrollView(child: Text(log.details!)),
-                        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Zamknij'))],
+                        content: SingleChildScrollView(
+                          child: Text(log.details!),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Zamknij'),
+                          ),
+                        ],
                       ),
                     );
                   }

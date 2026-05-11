@@ -23,7 +23,9 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         Provider<ApiService>.value(value: apiService),
         ChangeNotifierProvider(create: (_) => AuthProvider(apiService, token)),
-        Provider<PushNotificationService>.value(value: PushNotificationService()),
+        Provider<PushNotificationService>.value(
+          value: PushNotificationService(),
+        ),
       ],
       child: const SlaviaApp(),
     ),

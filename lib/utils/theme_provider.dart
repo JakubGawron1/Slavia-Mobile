@@ -1,7 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-enum SlaviaPreset { slavia, iron, arena, platform, midnight, ruby, neon, blackgym, pink }
+enum SlaviaPreset {
+  slavia,
+  iron,
+  arena,
+  platform,
+  midnight,
+  ruby,
+  neon,
+  blackgym,
+  pink,
+}
 
 class ThemeProvider with ChangeNotifier {
   SlaviaPreset _preset = SlaviaPreset.slavia;
@@ -24,16 +34,21 @@ class ThemeProvider with ChangeNotifier {
     final colors = _getPresetColors(_preset, isDark);
     final baseTheme = isDark ? ThemeData.dark() : ThemeData.light();
 
+    final baseScheme = ColorScheme.fromSeed(
+      seedColor: colors.primary,
+      primary: colors.primary,
+      secondary: colors.secondary,
+      surface: colors.surface,
+      onSurface: colors.onSurface,
+      brightness: isDark ? Brightness.dark : Brightness.light,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: isDark ? Brightness.dark : Brightness.light,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: colors.primary,
-        primary: colors.primary,
-        secondary: colors.secondary,
-        surface: colors.surface,
-        onSurface: colors.onSurface,
-        brightness: isDark ? Brightness.dark : Brightness.light,
+      colorScheme: baseScheme.copyWith(
+        tertiary: const Color(0xFFF59E0B),
+        onTertiary: const Color(0xFF1C1917),
       ),
       scaffoldBackgroundColor: colors.background,
       appBarTheme: AppBarTheme(
@@ -55,8 +70,14 @@ class ThemeProvider with ChangeNotifier {
         ),
       ),
       textTheme: GoogleFonts.outfitTextTheme(baseTheme.textTheme).copyWith(
-        displaySmall: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: colors.onSurface),
-        titleLarge: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: colors.onSurface),
+        displaySmall: GoogleFonts.outfit(
+          fontWeight: FontWeight.bold,
+          color: colors.onSurface,
+        ),
+        titleLarge: GoogleFonts.outfit(
+          fontWeight: FontWeight.bold,
+          color: colors.onSurface,
+        ),
         bodyLarge: GoogleFonts.outfit(color: colors.onSurface.withOpacity(0.9)),
       ),
     );
@@ -65,28 +86,30 @@ class ThemeProvider with ChangeNotifier {
   _PresetColors _getPresetColors(SlaviaPreset preset, bool isDark) {
     switch (preset) {
       case SlaviaPreset.slavia:
-        return isDark 
-          ? _PresetColors(
-              primary: const Color(0xFF00DC82),
-              secondary: const Color(0xFF00A155),
-              background: const Color(0xFF0F172A),
-              surface: const Color(0xFF1E293B),
-              card: const Color(0xFF1E293B),
-              onSurface: Colors.white,
-            )
-          : _PresetColors(
-              primary: const Color(0xFF00C16A),
-              secondary: const Color(0xFF00A155),
-              background: const Color(0xFFF8FAFF),
-              surface: Colors.white,
-              card: Colors.white,
-              onSurface: const Color(0xFF0B1726),
-            );
+        return isDark
+            ? _PresetColors(
+                primary: const Color(0xFF00DC82),
+                secondary: const Color(0xFF00A155),
+                background: const Color(0xFF0F172A),
+                surface: const Color(0xFF1E293B),
+                card: const Color(0xFF1E293B),
+                onSurface: Colors.white,
+              )
+            : _PresetColors(
+                primary: const Color(0xFF00C16A),
+                secondary: const Color(0xFF00A155),
+                background: const Color(0xFFF8FAFF),
+                surface: Colors.white,
+                card: Colors.white,
+                onSurface: const Color(0xFF0B1726),
+              );
       case SlaviaPreset.iron:
         return _PresetColors(
           primary: const Color(0xFF38BDF8),
           secondary: const Color(0xFF0284C7),
-          background: isDark ? const Color(0xFF0B1220) : const Color(0xFFF6F8FC),
+          background: isDark
+              ? const Color(0xFF0B1220)
+              : const Color(0xFFF6F8FC),
           surface: isDark ? const Color(0xFF0F172A) : Colors.white,
           card: isDark ? const Color(0xFF0F172A) : Colors.white,
           onSurface: isDark ? Colors.white : const Color(0xFF0C1528),
@@ -95,7 +118,9 @@ class ThemeProvider with ChangeNotifier {
         return _PresetColors(
           primary: const Color(0xFFFBBF24),
           secondary: const Color(0xFFD97706),
-          background: isDark ? const Color(0xFF120F0D) : const Color(0xFFFFFAF5),
+          background: isDark
+              ? const Color(0xFF120F0D)
+              : const Color(0xFFFFFAF5),
           surface: isDark ? const Color(0xFF1C1410) : Colors.white,
           card: isDark ? const Color(0xFF1C1410) : Colors.white,
           onSurface: isDark ? Colors.white : const Color(0xFF1F1612),
@@ -104,7 +129,9 @@ class ThemeProvider with ChangeNotifier {
         return _PresetColors(
           primary: const Color(0xFFEF4444),
           secondary: const Color(0xFFB91C1C),
-          background: isDark ? const Color(0xFF1A0B0B) : const Color(0xFFFFF9F8),
+          background: isDark
+              ? const Color(0xFF1A0B0B)
+              : const Color(0xFFFFF9F8),
           surface: isDark ? const Color(0xFF281212) : Colors.white,
           card: isDark ? const Color(0xFF281212) : Colors.white,
           onSurface: isDark ? Colors.white : const Color(0xFF1C1010),
@@ -122,7 +149,9 @@ class ThemeProvider with ChangeNotifier {
         return _PresetColors(
           primary: const Color(0xFF00DC82),
           secondary: const Color(0xFF00A155),
-          background: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFF),
+          background: isDark
+              ? const Color(0xFF0F172A)
+              : const Color(0xFFF8FAFF),
           surface: isDark ? const Color(0xFF1E293B) : Colors.white,
           card: isDark ? const Color(0xFF1E293B) : Colors.white,
           onSurface: isDark ? Colors.white : const Color(0xFF0B1726),

@@ -18,7 +18,6 @@ class CalculatorsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final roles = auth.user?.roles ?? [];
-    final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
       body: CustomScrollView(
@@ -28,36 +27,116 @@ class CalculatorsPage extends StatelessWidget {
             sliver: SliverToBoxAdapter(
               child: Text(
                 'Narzędzia',
-                style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w800),
+                style: GoogleFonts.outfit(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ),
 
           // Athlete section
           if (roles.contains('Athlete')) ...[
-            _sectionHeader('Strefa Zawodnika', Icons.stars_rounded, Colors.purple),
-            _toolCard(context, 'Mój Panel Zawodnika', 'Twoje wyniki, statystyki i zgłoszenia.', Icons.bar_chart_rounded, Colors.purple, const AthletePortalScreen()),
-            _toolCard(context, 'Dziennik treningów', 'Twoje notatki i historia treningowa.', Icons.book_outlined, Colors.teal, const TrainingLogScreen()),
+            _sectionHeader(
+              'Strefa Zawodnika',
+              Icons.stars_rounded,
+              Colors.purple,
+            ),
+            _toolCard(
+              context,
+              'Mój Panel Zawodnika',
+              'Twoje wyniki, statystyki i zgłoszenia.',
+              Icons.bar_chart_rounded,
+              Colors.purple,
+              const AthletePortalScreen(),
+            ),
+            _toolCard(
+              context,
+              'Dziennik treningów',
+              'Twoje notatki i historia treningowa.',
+              Icons.book_outlined,
+              Colors.teal,
+              const TrainingLogScreen(),
+            ),
           ],
 
           // Calculators section
           _sectionHeader('Kalkulatory', Icons.calculate_rounded, Colors.amber),
-          _toolCard(context, 'Kalkulator Sinclair', 'Przelicznik punktowy IWF 2025–2028.', Icons.calculate_rounded, Colors.amber, const SinclairCalculatorPage()),
-          _toolCard(context, 'Złote Proporcje', 'Analiza balansu siłowego między bojami.', Icons.balance_rounded, Colors.blue, const ProportionsCalculatorPage()),
+          _toolCard(
+            context,
+            'Kalkulator Sinclair',
+            'Przelicznik punktowy IWF 2025–2028.',
+            Icons.calculate_rounded,
+            Colors.amber,
+            const SinclairCalculatorPage(),
+          ),
+          _toolCard(
+            context,
+            'Złote Proporcje',
+            'Analiza balansu siłowego między bojami.',
+            Icons.balance_rounded,
+            Colors.blue,
+            const ProportionsCalculatorPage(),
+          ),
 
           // Staff tools
-          if (roles.contains('Trainer') || roles.contains('Admin') || roles.contains('SuperAdmin')) ...[
-            _sectionHeader('Narzędzia kadry', Icons.manage_accounts_rounded, Colors.orange),
-            _toolCard(context, 'Zarządzanie ogłoszeniami', 'Dodawaj i edytuj ogłoszenia klubowe.', Icons.campaign_rounded, Colors.orange, const PlaceholderPage(title: 'Zarządzanie ogłoszeniami')),
+          if (roles.contains('Trainer') ||
+              roles.contains('Admin') ||
+              roles.contains('SuperAdmin')) ...[
+            _sectionHeader(
+              'Narzędzia kadry',
+              Icons.manage_accounts_rounded,
+              Colors.orange,
+            ),
+            _toolCard(
+              context,
+              'Zarządzanie ogłoszeniami',
+              'Dodawaj i edytuj ogłoszenia klubowe.',
+              Icons.campaign_rounded,
+              Colors.orange,
+              const PlaceholderPage(title: 'Zarządzanie ogłoszeniami'),
+            ),
+            _toolCard(
+              context,
+              'Uzupełnianie startów',
+              'Przypisuj zawodników do zawodów.',
+              Icons.assignment_ind_rounded,
+              Colors.cyan,
+              const CompetitionAssignmentScreen(),
+            ),
           ],
 
           // SuperAdmin tools
           if (roles.contains('SuperAdmin')) ...[
-            _sectionHeader('SuperAdministracja', Icons.security_rounded, Colors.red),
-            _toolCard(context, 'Zarządzanie kadrą', 'Lista kont systemowych i uprawnień.', Icons.admin_panel_settings_rounded, Colors.red, const UserManagementScreen()),
-            _toolCard(context, 'Zarządzanie zawodnikami', 'Baza zawodników klubu i ich dane.', Icons.people_rounded, Colors.deepOrange, const SuperAdminAthleteManagerScreen()),
-            _toolCard(context, 'Uzupełnianie startów', 'Przypisuj zawodników do zawodów.', Icons.assignment_ind_rounded, Colors.cyan, const CompetitionAssignmentScreen()),
-            _toolCard(context, 'Logi systemowe', 'Historia zmian i audyt operacji.', Icons.history_rounded, Colors.deepPurple, const AuditLogScreen()),
+            _sectionHeader(
+              'SuperAdministracja',
+              Icons.security_rounded,
+              Colors.red,
+            ),
+            _toolCard(
+              context,
+              'Zarządzanie kadrą',
+              'Lista kont systemowych i uprawnień.',
+              Icons.admin_panel_settings_rounded,
+              Colors.red,
+              const UserManagementScreen(),
+            ),
+            _toolCard(
+              context,
+              'Zarządzanie zawodnikami',
+              'Baza zawodników klubu i ich dane.',
+              Icons.people_rounded,
+              Colors.deepOrange,
+              const SuperAdminAthleteManagerScreen(),
+            ),
+            _toolCard(
+              context,
+              'Logi systemowe',
+              'Historia zmian i audyt operacji.',
+              Icons.history_rounded,
+              Colors.deepPurple,
+              const AuditLogScreen(),
+            ),
           ],
 
           const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
@@ -74,7 +153,10 @@ class CalculatorsPage extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: Icon(icon, size: 16, color: color),
             ),
             const SizedBox(width: 8),
@@ -93,7 +175,14 @@ class CalculatorsPage extends StatelessWidget {
     );
   }
 
-  Widget _toolCard(BuildContext context, String title, String desc, IconData icon, Color color, Widget page) {
+  Widget _toolCard(
+    BuildContext context,
+    String title,
+    String desc,
+    IconData icon,
+    Color color,
+    Widget page,
+  ) {
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       sliver: SliverToBoxAdapter(
@@ -102,7 +191,10 @@ class CalculatorsPage extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => page),
+            ),
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
@@ -125,9 +217,21 @@ class CalculatorsPage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(title, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700)),
+                        Text(
+                          title,
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         const SizedBox(height: 3),
-                        Text(desc, style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey[600])),
+                        Text(
+                          desc,
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
                       ],
                     ),
                   ),

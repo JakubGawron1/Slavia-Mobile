@@ -4,7 +4,6 @@ import '../services/api_service.dart';
 import '../models/athlete.dart';
 import '../main.dart';
 
-
 class TrainingLogScreen extends StatefulWidget {
   const TrainingLogScreen({super.key});
 
@@ -23,9 +22,7 @@ class _TrainingLogScreenState extends State<TrainingLogScreen> {
     final athleteId = auth.user?.athleteId;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dziennik treningów'),
-      ),
+      appBar: AppBar(title: const Text('Dziennik treningów')),
       body: athleteId == null
           ? const Center(child: Text('Brak profilu zawodnika'))
           : FutureBuilder<List<TrainingLogEntry>>(
@@ -52,18 +49,30 @@ class _TrainingLogScreenState extends State<TrainingLogScreen> {
                               children: [
                                 Text(
                                   e.sessionDate.substring(0, 10),
-                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue,
+                                  ),
                                 ),
                                 if (e.authorUsername != null)
                                   Text(
                                     'Dodał: ${e.authorUsername}',
-                                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey,
+                                    ),
                                   ),
                               ],
                             ),
                             if (e.title != null && e.title!.isNotEmpty) ...[
                               const SizedBox(height: 8),
-                              Text(e.title!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              Text(
+                                e.title!,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
                             ],
                             const SizedBox(height: 8),
                             Text(e.notes),
@@ -77,14 +86,19 @@ class _TrainingLogScreenState extends State<TrainingLogScreen> {
             ),
       floatingActionButton: athleteId != null
           ? FloatingActionButton(
-              onPressed: () => _showAddEntryDialog(context, athleteId, apiService),
+              onPressed: () =>
+                  _showAddEntryDialog(context, athleteId, apiService),
               child: const Icon(Icons.add),
             )
           : null,
     );
   }
 
-  void _showAddEntryDialog(BuildContext context, String athleteId, ApiService apiService) {
+  void _showAddEntryDialog(
+    BuildContext context,
+    String athleteId,
+    ApiService apiService,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -94,18 +108,26 @@ class _TrainingLogScreenState extends State<TrainingLogScreen> {
           children: [
             TextField(
               controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Tytuł (opcjonalnie)'),
+              decoration: const InputDecoration(
+                labelText: 'Tytuł (opcjonalnie)',
+              ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _notesController,
               maxLines: 5,
-              decoration: const InputDecoration(labelText: 'Notatki', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Notatki',
+                border: OutlineInputBorder(),
+              ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Anuluj')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Anuluj'),
+          ),
           ElevatedButton(
             onPressed: () async {
               try {
@@ -117,7 +139,9 @@ class _TrainingLogScreenState extends State<TrainingLogScreen> {
                 Navigator.pop(context);
                 setState(() {}); // Refresh
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Błąd: $e')));
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Błąd: $e')));
               }
             },
             child: const Text('Dodaj'),

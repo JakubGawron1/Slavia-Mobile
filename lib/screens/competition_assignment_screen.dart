@@ -9,21 +9,30 @@ class CompetitionAssignmentScreen extends StatefulWidget {
   const CompetitionAssignmentScreen({super.key});
 
   @override
-  State<CompetitionAssignmentScreen> createState() => _CompetitionAssignmentScreenState();
+  State<CompetitionAssignmentScreen> createState() =>
+      _CompetitionAssignmentScreenState();
 }
 
-class _CompetitionAssignmentScreenState extends State<CompetitionAssignmentScreen> {
+class _CompetitionAssignmentScreenState
+    extends State<CompetitionAssignmentScreen> {
   @override
   Widget build(BuildContext context) {
     final apiService = Provider.of<ApiService>(context, listen: false);
 
     return Scaffold(
-      appBar: AppBar(title: Text('Starty Zawodników', style: GoogleFonts.outfit(fontWeight: FontWeight.bold))),
+      appBar: AppBar(
+        title: Text(
+          'Starty Zawodników',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
+      ),
       body: FutureBuilder<List<Competition>>(
         future: apiService.getCompetitions(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return Center(child: Text('Błąd: ${snapshot.error}'));
+          if (snapshot.connectionState == ConnectionState.waiting)
+            return const Center(child: CircularProgressIndicator());
+          if (snapshot.hasError)
+            return Center(child: Text('Błąd: ${snapshot.error}'));
           final competitions = snapshot.data ?? [];
           return ListView.builder(
             padding: const EdgeInsets.all(16),
@@ -35,7 +44,11 @@ class _CompetitionAssignmentScreenState extends State<CompetitionAssignmentScree
                 margin: const EdgeInsets.only(bottom: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
-                  side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.1)),
+                  side: BorderSide(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.1),
+                  ),
                 ),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(24),
@@ -48,27 +61,56 @@ class _CompetitionAssignmentScreenState extends State<CompetitionAssignmentScree
                           width: 60,
                           height: 60,
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Icon(Icons.event_note, color: Theme.of(context).colorScheme.primary, size: 30),
+                          child: Icon(
+                            Icons.event_note,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 30,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(c.title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                              Text(
+                                c.title,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: 14,
+                                    color: Colors.grey[600],
+                                  ),
                                   const SizedBox(width: 4),
-                                  Text(c.date.toString().substring(0, 10), style: TextStyle(color: Colors.grey[600])),
+                                  Text(
+                                    c.date.toString().substring(0, 10),
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
                                   const SizedBox(width: 12),
-                                  Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 14,
+                                    color: Colors.grey[600],
+                                  ),
                                   const SizedBox(width: 4),
-                                  Flexible(child: Text(c.location, style: TextStyle(color: Colors.grey[600]), overflow: TextOverflow.ellipsis)),
+                                  Flexible(
+                                    child: Text(
+                                      c.location,
+                                      style: TextStyle(color: Colors.grey[600]),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ],
@@ -87,13 +129,17 @@ class _CompetitionAssignmentScreenState extends State<CompetitionAssignmentScree
     );
   }
 
-  void _showAssignAthleteDialog(Competition competition, ApiService apiService) {
+  void _showAssignAthleteDialog(
+    Competition competition,
+    ApiService apiService,
+  ) {
     showDialog(
       context: context,
       builder: (context) => FutureBuilder<List<Athlete>>(
         future: apiService.getAthletes(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
           final athletes = snapshot.data!;
           return AlertDialog(
             title: Text('Przypisz do: ${competition.title}'),
@@ -119,9 +165,13 @@ class _CompetitionAssignmentScreenState extends State<CompetitionAssignmentScree
                           total: 0, // Placeholder
                         );
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Przypisano ${a.fullName}')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Przypisano ${a.fullName}')),
+                        );
                       } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Błąd: $e')));
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('Błąd: $e')));
                       }
                     },
                   );
@@ -129,7 +179,10 @@ class _CompetitionAssignmentScreenState extends State<CompetitionAssignmentScree
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Zamknij')),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Zamknij'),
+              ),
             ],
           );
         },

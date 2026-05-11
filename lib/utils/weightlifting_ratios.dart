@@ -71,15 +71,25 @@ class WeightliftingRatios {
       id: ExerciseId.backSquat,
       pl: 'Przysiad z tyłu',
       from: ExerciseId.cleanJerk,
-      ratio: RatioRange(min: 1 / 0.85, max: 1 / 0.75, source: 'C&J ≈ 75–85% back squat'),
-      adviceBelow: 'Jeśli przysiad z tyłu odstaje, często najszybciej działa plan siłowy.',
-      adviceAbove: 'Jeśli przysiad jest bardzo mocny, a podrzut stoi, brakuje transferu technicznego.',
+      ratio: RatioRange(
+        min: 1 / 0.85,
+        max: 1 / 0.75,
+        source: 'C&J ≈ 75–85% back squat',
+      ),
+      adviceBelow:
+          'Jeśli przysiad z tyłu odstaje, często najszybciej działa plan siłowy.',
+      adviceAbove:
+          'Jeśli przysiad jest bardzo mocny, a podrzut stoi, brakuje transferu technicznego.',
     ),
     ExerciseDef(
       id: ExerciseId.frontSquat,
       pl: 'Przysiad z przodu',
       from: ExerciseId.backSquat,
-      ratio: RatioRange(min: 0.85, max: 0.93, source: 'Front squat ≈ 85–93% back squat'),
+      ratio: RatioRange(
+        min: 0.85,
+        max: 0.93,
+        source: 'Front squat ≈ 85–93% back squat',
+      ),
       adviceBelow: 'Popracuj nad pozycją rack i siłą czwórek.',
       adviceAbove: 'Świetny „clean engine”. Skup się na dynamice wstania.',
     ),
@@ -87,13 +97,21 @@ class WeightliftingRatios {
       id: ExerciseId.snatchSquat,
       pl: 'Przysiad rwaniowy',
       from: ExerciseId.snatch,
-      ratio: RatioRange(min: 0.95, max: 1.05, source: 'Overhead squat ~ 100% snatch'),
+      ratio: RatioRange(
+        min: 0.95,
+        max: 1.05,
+        source: 'Overhead squat ~ 100% snatch',
+      ),
     ),
     ExerciseDef(
       id: ExerciseId.powerSnatch,
       pl: 'Rwanie siłowe',
       from: ExerciseId.snatch,
-      ratio: RatioRange(min: 0.80, max: 0.85, source: 'Power snatch ≈ 80–85% snatch'),
+      ratio: RatioRange(
+        min: 0.80,
+        max: 0.85,
+        source: 'Power snatch ≈ 80–85% snatch',
+      ),
     ),
     ExerciseDef(
       id: ExerciseId.powerClean,
@@ -106,21 +124,28 @@ class WeightliftingRatios {
       id: ExerciseId.pushPress,
       pl: 'Wycisko-podrzut',
       from: ExerciseId.cleanJerk,
-      ratio: RatioRange(min: 0.60, max: 0.75, source: 'Push press ≈ 75–85% jerk', heuristic: true),
+      ratio: RatioRange(
+        min: 0.60,
+        max: 0.75,
+        source: 'Push press ≈ 75–85% jerk',
+        heuristic: true,
+      ),
     ),
   ];
 
-  static Map<ExerciseId, String> get names => {for (var e in exercises) e.id: e.pl};
+  static Map<ExerciseId, String> get names => {
+    for (var e in exercises) e.id: e.pl,
+  };
 
   static List<RatioResult> compute(Map<ExerciseId, double?> inputs) {
     final results = <RatioResult>[];
-    
+
     for (final e in exercises) {
       if (e.id == e.from) continue;
-      
+
       final base = inputs[e.from];
       final actual = inputs[e.id];
-      
+
       double? minKg;
       double? maxKg;
       double? actualPct;
@@ -130,7 +155,7 @@ class WeightliftingRatios {
       if (base != null && base > 0) {
         minKg = base * e.ratio.min;
         maxKg = base * e.ratio.max;
-        
+
         if (actual != null && actual > 0) {
           actualPct = (actual / base) * 100;
           if (actualPct < e.ratio.min * 100) {
@@ -140,32 +165,54 @@ class WeightliftingRatios {
           } else {
             status = 'in_range';
           }
-          note = _buildNote(status, e.pl, names[e.from]!, actualPct, e.ratio.min * 100, e.ratio.max * 100, e.adviceBelow, e.adviceAbove);
+          note = _buildNote(
+            status,
+            e.pl,
+            names[e.from]!,
+            actualPct,
+            e.ratio.min * 100,
+            e.ratio.max * 100,
+            e.adviceBelow,
+            e.adviceAbove,
+          );
         }
       }
-      
-      results.add(RatioResult(
-        id: e.id,
-        pl: e.pl,
-        fromPl: names[e.from]!,
-        minKg: minKg,
-        maxKg: maxKg,
-        actualKg: actual,
-        actualPct: actualPct,
-        status: status,
-        note: note,
-        ratioSource: e.ratio.source,
-      ));
+
+      results.add(
+        RatioResult(
+          id: e.id,
+          pl: e.pl,
+          fromPl: names[e.from]!,
+          minKg: minKg,
+          maxKg: maxKg,
+          actualKg: actual,
+          actualPct: actualPct,
+          status: status,
+          note: note,
+          ratioSource: e.ratio.source,
+        ),
+      );
     }
-    
+
     return results;
   }
 
-  static String _buildNote(String status, String ex, String base, double actual, double min, double max, String? below, String? above) {
+  static String _buildNote(
+    String status,
+    String ex,
+    String base,
+    double actual,
+    double min,
+    double max,
+    String? below,
+    String? above,
+  ) {
     final rangeStr = '${min.round()}–${max.round()}%';
     final actualStr = '${actual.round()}%';
-    if (status == 'in_range') return 'Super — $ex jest w widełkach względem $base ($actualStr vs $rangeStr).';
-    if (status == 'below') return '$ex jest poniżej zakresu względem $base ($actualStr vs $rangeStr). ${below ?? ""}';
+    if (status == 'in_range')
+      return 'Super — $ex jest w widełkach względem $base ($actualStr vs $rangeStr).';
+    if (status == 'below')
+      return '$ex jest poniżej zakresu względem $base ($actualStr vs $rangeStr). ${below ?? ""}';
     return '$ex jest powyżej zakresu względem $base ($actualStr vs $rangeStr). ${above ?? ""}';
   }
 }

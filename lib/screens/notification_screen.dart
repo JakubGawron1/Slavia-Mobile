@@ -12,9 +12,7 @@ class NotificationScreen extends StatelessWidget {
     final apiService = Provider.of<ApiService>(context, listen: false);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Powiadomienia'),
-      ),
+      appBar: AppBar(title: const Text('Powiadomienia')),
       body: FutureBuilder<List<ClubNotification>>(
         future: apiService.getNotifications(),
         builder: (context, snapshot) {
@@ -34,10 +32,17 @@ class NotificationScreen extends StatelessWidget {
               final n = notifications[index];
               return ListTile(
                 leading: Icon(
-                  n.isRead ? Icons.notifications_none : Icons.notifications_active,
+                  n.isRead
+                      ? Icons.notifications_none
+                      : Icons.notifications_active,
                   color: n.isRead ? Colors.grey : Colors.blue,
                 ),
-                title: Text(n.title, style: TextStyle(fontWeight: n.isRead ? FontWeight.normal : FontWeight.bold)),
+                title: Text(
+                  n.title,
+                  style: TextStyle(
+                    fontWeight: n.isRead ? FontWeight.normal : FontWeight.bold,
+                  ),
+                ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

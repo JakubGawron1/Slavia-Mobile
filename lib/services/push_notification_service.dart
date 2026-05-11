@@ -10,7 +10,8 @@ class PushNotificationService {
   factory PushNotificationService() => _instance;
   PushNotificationService._();
 
-  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
   Timer? _timer;
   bool _initialized = false;
   ApiService? _apiService;
@@ -24,7 +25,9 @@ class PushNotificationService {
     if (_initialized) return;
     _initialized = true;
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/launcher_icon');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/launcher_icon',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -41,7 +44,9 @@ class PushNotificationService {
 
     // Request runtime permission on Android 13+
     final androidImpl = _plugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     await androidImpl?.requestNotificationsPermission();
   }
 
@@ -63,7 +68,9 @@ class PushNotificationService {
       final prefs = await SharedPreferences.getInstance();
       final seen = Set<String>.from(prefs.getStringList(_prefKey) ?? []);
 
-      final newOnes = notifications.where((n) => !n.isRead && !seen.contains(n.id)).toList();
+      final newOnes = notifications
+          .where((n) => !n.isRead && !seen.contains(n.id))
+          .toList();
 
       for (final n in newOnes) {
         await _showSystemNotification(n.id.hashCode, n.title, n.body);
@@ -76,7 +83,11 @@ class PushNotificationService {
     }
   }
 
-  Future<void> _showSystemNotification(int id, String title, String body) async {
+  Future<void> _showSystemNotification(
+    int id,
+    String title,
+    String body,
+  ) async {
     const androidDetails = AndroidNotificationDetails(
       _channelId,
       _channelName,

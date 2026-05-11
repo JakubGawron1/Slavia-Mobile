@@ -8,6 +8,7 @@ import '../models/athlete.dart';
 import '../models/notification.dart';
 import '../models/competition.dart';
 import '../models/announcement.dart';
+import '../models/chat.dart';
 
 class ApiService {
   static const String baseUrl = 'https://slavia-backend.onrender.com';
@@ -163,7 +164,11 @@ class ApiService {
     }
   }
 
-  Future<void> createTrainingLogEntry(String athleteId, String notes, String? title) async {
+  Future<void> createTrainingLogEntry(
+    String athleteId,
+    String notes,
+    String? title,
+  ) async {
     final token = await getToken();
     final response = await http.post(
       Uri.parse('$baseUrl/api/athletes/$athleteId/training-log'),
@@ -246,6 +251,27 @@ class ApiService {
     }
   }
 
+  /// Historia startów (domyślnie zawody). `kind=training` — sala (wymaga uprawnień jak na WWW).
+  Future<List<CompetitionResult>> getAthleteResultHistory(
+    String athleteId, {
+    String? kind,
+  }) async {
+    final token = await getToken();
+    final q = (kind == null || kind.isEmpty)
+        ? ''
+        : '?kind=${Uri.encodeQueryComponent(kind)}';
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/results/athlete/$athleteId$q'),
+      headers: _headers(token),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((item) => CompetitionResult.fromJson(item)).toList();
+    }
+    throw Exception('Failed to load result history: ${response.statusCode}');
+  }
+
   Future<void> submitResult({
     required String athleteId,
     required String date,
@@ -278,7 +304,11 @@ class ApiService {
   }
 
   // SuperAdmin: User Actions
-  Future<void> createUser(String username, String password, List<String> roles) async {
+  Future<void> createUser(
+    String username,
+    String password,
+    List<String> roles,
+  ) async {
     final token = await getToken();
     final response = await http.post(
       Uri.parse('$baseUrl/api/admins'),
@@ -362,18 +392,26 @@ class ApiService {
   // Image Upload
   Future<String> uploadImage(File file, String purpose) async {
     final token = await getToken();
-    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/api/upload'));
-    
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/api/upload'),
+    );
+
     if (token != null) {
       request.headers['Authorization'] = 'Bearer $token';
     }
-    
+
     request.fields['purpose'] = purpose;
-    request.files.add(await http.MultipartFile.fromPath(
-      'file',
-      file.path,
-      contentType: MediaType('image', 'jpeg'), // Default to jpeg, picker usually provides it
-    ));
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'file',
+        file.path,
+        contentType: MediaType(
+          'image',
+          'jpeg',
+        ), // Default to jpeg, picker usually provides it
+      ),
+    );
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
@@ -383,6 +421,112 @@ class ApiService {
       return data['url'];
     } else {
       throw Exception('Failed to upload image: ${response.body}');
+    }
+  }
+
+  /// Kadra — lista zawodników z `user_id` (jak `/api/athletes/admin` na WWW, m.in. do czatu).
+  Future<List<Athlete>> getAthletesAdmin() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/athletes/admin'),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((item) => Athlete.fromJson(item)).toList();
+    }
+    throw Exception('Failed to load admin athletes: ${response.statusCode}');
+  }
+
+  Future<List<ChatThread>> getChatThreads() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/chat/threads'),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data
+          .map((e) => ChatThread.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to load chat threads: ${response.statusCode}');
+  }
+
+  Future<ChatThread> openChatThread({
+    required String athleteUserId,
+    required String trainerUserId,
+    String? title,
+  }) async {
+    final token = await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/chat/threads'),
+      headers: _headers(token),
+      body: jsonEncode({
+        'athlete_user_id': athleteUserId,
+        'trainer_user_id': trainerUserId,
+        if (title != null && title.trim().isNotEmpty) 'title': title.trim(),
+      }),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return ChatThread.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+    throw Exception('Failed to open thread: ${response.body}');
+  }
+
+  Future<List<ChatMessage>> getChatMessages(String threadId) async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse(
+        '$baseUrl/api/chat/threads/${Uri.encodeComponent(threadId)}/messages',
+      ),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data
+          .map((e) => ChatMessage.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to load messages: ${response.statusCode}');
+  }
+
+  Future<void> sendChatMessage(String threadId, String body) async {
+    final token = await getToken();
+    final response = await http.post(
+      Uri.parse(
+        '$baseUrl/api/chat/threads/${Uri.encodeComponent(threadId)}/messages',
+      ),
+      headers: _headers(token),
+      body: jsonEncode({'body': body}),
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Failed to send message: ${response.body}');
+    }
+  }
+
+  Future<void> updateChatThreadTitle(String threadId, String title) async {
+    final token = await getToken();
+    final response = await http.patch(
+      Uri.parse('$baseUrl/api/chat/threads/${Uri.encodeComponent(threadId)}'),
+      headers: _headers(token),
+      body: jsonEncode({'title': title.trim().isEmpty ? null : title.trim()}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update title: ${response.body}');
+    }
+  }
+
+  Future<void> deleteChatThread(String threadId) async {
+    final token = await getToken();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/chat/threads/${Uri.encodeComponent(threadId)}'),
+      headers: _headers(token),
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete thread: ${response.body}');
     }
   }
 }

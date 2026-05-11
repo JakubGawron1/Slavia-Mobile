@@ -20,3 +20,26 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+## GitHub Releases (APK)
+
+Workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) buduje **release APK** i dołącza plik do GitHub Release po wypchnięciu tagu w formacie `v*.*` lub `v*.*.*` (np. `git tag v1.0.1 && git push origin v1.0.1`).
+
+Artefakt domyślny: `build/app/outputs/flutter-apk/app-release.apk` — strona klubu może linkować do najnowszego release przez API (patrz `NUXT_PUBLIC_MOBILE_GITHUB_REPO` w repozytorium frontendu).
+
+## Spójność z frontendem (WWW)
+
+- Motyw domyślny **Slavia** (zieleń + slate) i font **Outfit** — zbliżone do strony Nuxt ([produkcja](https://cksslavia.vercel.app/)).
+- W menu **☰ (Więcej)** → **„Strona klubu”** domyślnie otwiera **https://cksslavia.vercel.app/** (bez dodatkowej konfiguracji).
+
+Inny adres (np. staging):
+
+```bash
+flutter run --dart-define=SLAVIA_WEB_URL=https://twoja-preview.vercel.app
+```
+
+## Profil zawodnika — statystyki i wykresy
+
+- Lista **Zawodnicy** → tap na kartę otwiera **pełny profil** (`AthleteDetailScreen`): PB z zawodów, Sinclair, starty, wykres progresu dwuboju (zatwierdzone zawody), opcjonalnie **zawody vs trening** + siatka insightów (realizacja formy, trend 90 dni, PB w serii…) — zgodnie z logiką profilu na stronie.
+- **Panel zawodnika** → zakładka **Przegląd** korzysta z tego samego widoku.
+- Menu **☰** → **„Moje wykresy i statystyki”** (gdy konto ma `athlete_id`).

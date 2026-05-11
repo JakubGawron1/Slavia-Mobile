@@ -36,7 +36,8 @@ class CalendarScreen extends StatelessWidget {
             itemCount: items.length,
             itemBuilder: (context, index) {
               final c = items[index];
-              final isFirstInMonth = index == 0 || items[index - 1].date.month != c.date.month;
+              final isFirstInMonth =
+                  index == 0 || items[index - 1].date.month != c.date.month;
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,13 +71,15 @@ class CalendarScreen extends StatelessWidget {
 
   Widget _buildEventCard(BuildContext context, Competition c) {
     final color = _getCategoryColor(c.category);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.secondary.withOpacity(0.05),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.2)),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.2),
+        ),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
@@ -118,7 +121,10 @@ class CalendarScreen extends StatelessWidget {
                         children: [
                           if (c.category != null)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: color.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(6),
@@ -136,7 +142,10 @@ class CalendarScreen extends StatelessWidget {
                           if (c.status != null)
                             Text(
                               c.status!,
-                              style: const TextStyle(fontSize: 10, color: Colors.grey),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey,
+                              ),
                             ),
                         ],
                       ),
@@ -152,12 +161,19 @@ class CalendarScreen extends StatelessWidget {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(Icons.location_on_outlined, size: 14, color: color.withOpacity(0.7)),
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
+                            color: color.withOpacity(0.7),
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               c.location,
-                              style: const TextStyle(fontSize: 13, color: Colors.grey),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),

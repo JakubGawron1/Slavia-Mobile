@@ -3,7 +3,11 @@ class AuthResponse {
   final List<String> roles;
   final String userId;
 
-  AuthResponse({required this.token, required this.roles, required this.userId});
+  AuthResponse({
+    required this.token,
+    required this.roles,
+    required this.userId,
+  });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
     return AuthResponse(

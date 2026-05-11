@@ -39,18 +39,28 @@ class AnnouncementPage extends StatelessWidget {
                           if (a.pinned)
                             const Padding(
                               padding: EdgeInsets.only(right: 8.0),
-                              child: Icon(Icons.push_pin, size: 16, color: Colors.blue),
+                              child: Icon(
+                                Icons.push_pin,
+                                size: 16,
+                                color: Colors.blue,
+                              ),
                             ),
                           Text(
                             DateFormat('dd.MM.yyyy HH:mm').format(a.createdAt),
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Text(
                         a.title,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Text(a.body),

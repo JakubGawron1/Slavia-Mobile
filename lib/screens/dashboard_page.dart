@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../main.dart';
 import '../services/api_service.dart';
 import '../models/announcement.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'announcement_page.dart';
+import 'athlete_portal_screen.dart';
+import 'competition_assignment_screen.dart';
+import 'proportions_calculator_page.dart';
+import 'sinclair_calculator_page.dart';
+import '../ui/slavia_ui.dart';
+import 'training_log_screen.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -23,8 +31,13 @@ class DashboardPage extends StatelessWidget {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             sliver: SliverToBoxAdapter(
-              child: _buildHero(context, auth.user?.username ?? 'Zawodnik',
-                  auth.user?.avatarUrl ?? auth.user?.athleteImageUrl, isDark, primary),
+              child: _buildHero(
+                context,
+                auth.user?.username ?? 'Zawodnik',
+                auth.user?.avatarUrl ?? auth.user?.athleteImageUrl,
+                isDark,
+                primary,
+              ),
             ),
           ),
 
@@ -37,7 +50,7 @@ class DashboardPage extends StatelessWidget {
                   _QuickStatCard(
                     icon: Icons.bolt,
                     label: 'Aktywny',
-                    value: auth.user?.roles?.first ?? 'Zawodnik',
+                    value: auth.user?.roles.first ?? 'Zawodnik',
                     primary: primary,
                   ),
                   const SizedBox(width: 12),
@@ -52,6 +65,13 @@ class DashboardPage extends StatelessWidget {
             ),
           ),
 
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+            sliver: SliverToBoxAdapter(
+              child: _QuickAccessRow(auth: auth, primary: primary),
+            ),
+          ),
+
           // Announcements title
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 28, 16, 12),
@@ -59,17 +79,71 @@ class DashboardPage extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Ogłoszenia',
-                    style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: primary,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            'Ogłoszenia',
+                            style: GoogleFonts.outfit(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    child: Text('Wszystkie', style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600, color: primary)),
+                  ),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (ctx) => Scaffold(
+                              appBar: AppBar(
+                                title: Text(
+                                  'Ogłoszenia',
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              body: const AnnouncementPage(),
+                            ),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Wszystkie',
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: primary,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -85,7 +159,10 @@ class DashboardPage extends StatelessWidget {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Column(
-                      children: List.generate(3, (i) => _AnnouncementSkeleton(isDark: isDark)),
+                      children: List.generate(
+                        3,
+                        (i) => _AnnouncementSkeleton(isDark: isDark),
+                      ),
                     );
                   }
                   final list = snapshot.data?.take(5).toList() ?? [];
@@ -97,9 +174,18 @@ class DashboardPage extends StatelessWidget {
                     );
                   }
                   return Column(
-                    children: list.asMap().entries.map((e) =>
-                      _AnnouncementCard(announcement: e.value, index: e.key, primary: primary, isDark: isDark),
-                    ).toList(),
+                    children: list
+                        .asMap()
+                        .entries
+                        .map(
+                          (e) => _AnnouncementCard(
+                            announcement: e.value,
+                            index: e.key,
+                            primary: primary,
+                            isDark: isDark,
+                          ),
+                        )
+                        .toList(),
                   );
                 },
               ),
@@ -112,7 +198,13 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildHero(BuildContext context, String name, String? imageUrl, bool isDark, Color primary) {
+  Widget _buildHero(
+    BuildContext context,
+    String name,
+    String? imageUrl,
+    bool isDark,
+    Color primary,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -143,7 +235,11 @@ class DashboardPage extends StatelessWidget {
             top: -20,
             child: Opacity(
               opacity: 0.15,
-              child: Icon(Icons.sports_gymnastics, size: 100, color: Colors.white),
+              child: Icon(
+                Icons.sports_gymnastics,
+                size: 100,
+                color: Colors.white,
+              ),
             ),
           ),
           Column(
@@ -181,12 +277,21 @@ class DashboardPage extends StatelessWidget {
                     Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withOpacity(0.4), width: 3),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.4),
+                          width: 3,
+                        ),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 12),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 12,
+                          ),
                         ],
                       ),
-                      child: CircleAvatar(radius: 32, backgroundImage: NetworkImage(imageUrl)),
+                      child: CircleAvatar(
+                        radius: 32,
+                        backgroundImage: NetworkImage(imageUrl),
+                      ),
                     ),
                   ] else ...[
                     const SizedBox(width: 16),
@@ -196,12 +301,19 @@ class DashboardPage extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.white.withOpacity(0.2),
-                        border: Border.all(color: Colors.white.withOpacity(0.4), width: 3),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.4),
+                          width: 3,
+                        ),
                       ),
                       child: Center(
                         child: Text(
                           name.substring(0, 1).toUpperCase(),
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 26),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 26,
+                          ),
                         ),
                       ),
                     ),
@@ -216,17 +328,165 @@ class DashboardPage extends StatelessWidget {
   }
 }
 
+class _QuickAccessRow extends StatelessWidget {
+  final AuthProvider auth;
+  final Color primary;
+
+  const _QuickAccessRow({required this.auth, required this.primary});
+
+  @override
+  Widget build(BuildContext context) {
+    final roles = auth.user?.roles ?? <String>[];
+    final isAthlete = roles.contains('Athlete');
+    final isStaff = roles.any(
+      (r) => r == 'Trainer' || r == 'Admin' || r == 'SuperAdmin',
+    );
+
+    void push(Widget page) {
+      Navigator.push<void>(
+        context,
+        MaterialPageRoute<void>(builder: (_) => page),
+      );
+    }
+
+    final tiles = <Widget>[
+      _quickTile(
+        context,
+        'Sinclair',
+        Icons.calculate_rounded,
+        Colors.amber,
+        () => push(const SinclairCalculatorPage()),
+      ),
+      _quickTile(
+        context,
+        'Proporcje',
+        Icons.balance_rounded,
+        Colors.blue,
+        () => push(const ProportionsCalculatorPage()),
+      ),
+    ];
+    if (isAthlete) {
+      tiles.add(
+        _quickTile(
+          context,
+          'Dziennik',
+          Icons.book_outlined,
+          Colors.teal,
+          () => push(const TrainingLogScreen()),
+        ),
+      );
+      tiles.add(
+        _quickTile(
+          context,
+          'Panel',
+          Icons.bar_chart_rounded,
+          Colors.purple,
+          () => push(const AthletePortalScreen()),
+        ),
+      );
+    }
+    if (isStaff) {
+      tiles.add(
+        _quickTile(
+          context,
+          'Starty',
+          Icons.assignment_ind_rounded,
+          Colors.cyan,
+          () => push(const CompetitionAssignmentScreen()),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SlaviaUi.sectionHeader(
+          context,
+          'Szybki dostęp',
+          accent: primary,
+          icon: Icons.bolt_rounded,
+        ),
+        const SizedBox(height: 2),
+        SizedBox(
+          height: 86,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: tiles.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (_, i) => tiles[i],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _quickTile(
+    BuildContext context,
+    String label,
+    IconData icon,
+    Color accent,
+    VoidCallback onTap,
+  ) {
+    return SizedBox(
+      width: 104,
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: primary.withOpacity(0.12)),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: accent.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: accent, size: 22),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _QuickStatCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
   final Color primary;
 
-  const _QuickStatCard({required this.icon, required this.label, required this.value, required this.primary});
+  const _QuickStatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.primary,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -251,8 +511,22 @@ class _QuickStatCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey[600], fontWeight: FontWeight.w500)),
-                  Text(value, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                  Text(
+                    label,
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    value,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ],
               ),
             ),
@@ -269,7 +543,12 @@ class _AnnouncementCard extends StatelessWidget {
   final Color primary;
   final bool isDark;
 
-  const _AnnouncementCard({required this.announcement, required this.index, required this.primary, required this.isDark});
+  const _AnnouncementCard({
+    required this.announcement,
+    required this.index,
+    required this.primary,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -292,7 +571,55 @@ class _AnnouncementCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
-            onTap: () {},
+            onTap: () {
+              HapticFeedback.lightImpact();
+              final h = MediaQuery.sizeOf(context).height * 0.72;
+              showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                showDragHandle: true,
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(SlaviaUi.radiusXl),
+                  ),
+                ),
+                builder: (ctx) => SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 4, 22, 20),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: h),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            announcement.title,
+                            style: GoogleFonts.outfit(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              child: Text(
+                                announcement.body,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 15,
+                                  height: 1.45,
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.88),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -313,14 +640,20 @@ class _AnnouncementCard extends StatelessWidget {
                       children: [
                         Text(
                           announcement.title,
-                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700),
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           announcement.body,
-                          style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey[600]),
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -345,22 +678,48 @@ class _AnnouncementSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.06);
+    final base = isDark
+        ? Colors.white.withOpacity(0.06)
+        : Colors.black.withOpacity(0.06);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: base, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        color: base,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Row(
         children: [
-          Container(width: 44, height: 44, decoration: BoxDecoration(color: base, borderRadius: BorderRadius.circular(14))),
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: base,
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(height: 16, width: 180, decoration: BoxDecoration(color: base, borderRadius: BorderRadius.circular(8))),
+                Container(
+                  height: 16,
+                  width: 180,
+                  decoration: BoxDecoration(
+                    color: base,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Container(height: 12, width: 120, decoration: BoxDecoration(color: base, borderRadius: BorderRadius.circular(8))),
+                Container(
+                  height: 12,
+                  width: 120,
+                  decoration: BoxDecoration(
+                    color: base,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ],
             ),
           ),
@@ -374,7 +733,11 @@ class _EmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  const _EmptyState({required this.icon, required this.title, required this.subtitle});
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -384,9 +747,19 @@ class _EmptyState extends StatelessWidget {
         children: [
           Icon(icon, size: 56, color: Colors.grey[400]),
           const SizedBox(height: 12),
-          Text(title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+          Text(
+            title,
+            style: GoogleFonts.outfit(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(subtitle, style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey[400])),
+          Text(
+            subtitle,
+            style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey[400]),
+          ),
         ],
       ),
     );
