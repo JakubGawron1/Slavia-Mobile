@@ -230,7 +230,10 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           child: StatefulBuilder(
             builder: (ctx, setSheet) {
-              return Padding(
+              return SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -332,6 +335,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: const Text('Otwórz wątek'),
                     ),
                   ],
+                ),
                 ),
               );
             },
@@ -499,6 +503,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                   Expanded(
                                     child: TextField(
                                       controller: _titleDraftCtrl,
+                                      maxLines: 1,
                                       decoration: const InputDecoration(
                                         labelText: 'Tytuł konwersacji',
                                         isDense: true,
@@ -635,7 +640,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     child: TextField(
                                       controller: _draftCtrl,
                                       minLines: 1,
-                                      maxLines: 4,
+                                      maxLines: 3,
                                       textInputAction: TextInputAction.send,
                                       onSubmitted: (_) => _send(),
                                       decoration: InputDecoration(

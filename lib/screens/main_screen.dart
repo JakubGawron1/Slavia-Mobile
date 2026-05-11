@@ -64,7 +64,7 @@ class _MainScreenState extends State<MainScreen>
     _NavItem(
       icon: Icons.calendar_month_outlined,
       selectedIcon: Icons.calendar_month,
-      label: 'Kalendarz',
+      label: 'Moje starty',
     ),
     _NavItem(
       icon: Icons.campaign_outlined,
@@ -87,7 +87,9 @@ class _MainScreenState extends State<MainScreen>
       ),
       builder: (ctx) {
         return SafeArea(
-          child: Column(
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -240,7 +242,7 @@ class _MainScreenState extends State<MainScreen>
               ListTile(
                 leading: Icon(Icons.calendar_month_outlined, color: cs.primary),
                 title: Text(
-                  'Kalendarz startów',
+                  'Moje starty',
                   style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
                 ),
                 onTap: () {
@@ -281,6 +283,7 @@ class _MainScreenState extends State<MainScreen>
               ),
               const SizedBox(height: 8),
             ],
+          ),
           ),
         );
       },

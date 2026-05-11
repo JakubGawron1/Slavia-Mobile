@@ -132,6 +132,31 @@ class ApiService {
     }
   }
 
+  /// Zawody przypisane do zalogowanego zawodnika (`competition_participants`), jak `/kalendarz` z filtrem „Moje starty”.
+  Future<List<Competition>> getMyCalendarCompetitions() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/athletes/my-calendar'),
+      headers: _headers(token),
+    );
+
+    if (response.statusCode == 200) {
+      final map = jsonDecode(response.body) as Map<String, dynamic>;
+      final entries = (map['entries'] as List<dynamic>?) ?? [];
+      return entries
+          .map((e) => e as Map<String, dynamic>)
+          .map(
+            (e) =>
+                Competition.fromJson(e['competition'] as Map<String, dynamic>),
+          )
+          .toList();
+    }
+    if (response.statusCode == 403) {
+      throw Exception('calendar_athlete_only');
+    }
+    throw Exception('Failed to load my calendar');
+  }
+
   // Announcements
   Future<List<Announcement>> getAnnouncements() async {
     final token = await getToken();

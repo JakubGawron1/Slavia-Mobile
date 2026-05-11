@@ -1,34 +1,108 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../main.dart';
 import '../services/api_service.dart';
 import '../models/competition.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// Kalendarz startów **tylko dla zalogowanego zawodnika** — zawody z przypisania (`/api/athletes/my-calendar`).
 class CalendarScreen extends StatelessWidget {
   const CalendarScreen({super.key});
 
+  bool _isAthlete(AuthProvider auth) {
+    final r = auth.user?.roles ?? [];
+    return r.contains('Athlete');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context);
     final apiService = Provider.of<ApiService>(context, listen: false);
+    final cs = Theme.of(context).colorScheme;
+
+    if (!_isAthlete(auth)) {
+      return Scaffold(
+        backgroundColor: cs.surface,
+        appBar: AppBar(
+          title: Text(
+            'Moje starty',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.w800),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.event_busy_outlined, size: 56, color: cs.outline),
+                const SizedBox(height: 16),
+                Text(
+                  'Widok Twoich startów',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: cs.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Lista pokazuje zawody przypisane do profilu zawodnika. Dostępna jest dla kont z rolą Zawodnik.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    height: 1.4,
+                    color: cs.onSurface.withValues(alpha: 0.65),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: cs.surface,
+      appBar: AppBar(
+        title: Text(
+          'Moje starty',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w800),
+        ),
+      ),
       body: FutureBuilder<List<Competition>>(
-        future: apiService.getCompetitions(),
+        future: apiService.getMyCalendarCompetitions(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Błąd: ${snapshot.error}'));
+            final msg = snapshot.error.toString();
+            final friendly = msg.contains('calendar_athlete_only')
+                ? 'Brak uprawnień do kalendarza zawodnika.'
+                : 'Błąd: $msg';
+            return Center(child: Text(friendly));
           }
           final items = snapshot.data ?? [];
           if (items.isEmpty) {
-            return const Center(child: Text('Brak zaplanowanych wydarzeń'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Brak przypisanych startów.\nTrener dopisze Cię do zawodów w panelu klubu.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 15,
+                    height: 1.45,
+                    color: cs.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            );
           }
 
-          // Sort by date
           items.sort((a, b) => a.date.compareTo(b.date));
 
           return ListView.builder(
@@ -71,14 +145,15 @@ class CalendarScreen extends StatelessWidget {
 
   Widget _buildEventCard(BuildContext context, Competition c) {
     final color = _getCategoryColor(c.category);
+    final cs = Theme.of(context).colorScheme;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondary.withOpacity(0.05),
+        color: cs.secondary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.2),
+          color: cs.outlineVariant.withValues(alpha: 0.2),
         ),
       ),
       child: ClipRRect(
@@ -88,7 +163,7 @@ class CalendarScreen extends StatelessWidget {
             children: [
               Container(
                 width: 70,
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -105,7 +180,7 @@ class CalendarScreen extends StatelessWidget {
                       style: GoogleFonts.outfit(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: color.withOpacity(0.7),
+                        color: color.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -126,7 +201,7 @@ class CalendarScreen extends StatelessWidget {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: color.withOpacity(0.15),
+                                color: color.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -142,9 +217,9 @@ class CalendarScreen extends StatelessWidget {
                           if (c.status != null)
                             Text(
                               c.status!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10,
-                                color: Colors.grey,
+                                color: cs.onSurface.withValues(alpha: 0.5),
                               ),
                             ),
                         ],
@@ -155,7 +230,7 @@ class CalendarScreen extends StatelessWidget {
                         style: GoogleFonts.outfit(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: cs.onSurface,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -164,15 +239,15 @@ class CalendarScreen extends StatelessWidget {
                           Icon(
                             Icons.location_on_outlined,
                             size: 14,
-                            color: color.withOpacity(0.7),
+                            color: color.withValues(alpha: 0.7),
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               c.location,
-                              style: const TextStyle(
+                              style: GoogleFonts.outfit(
                                 fontSize: 13,
-                                color: Colors.grey,
+                                color: cs.onSurface.withValues(alpha: 0.65),
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),

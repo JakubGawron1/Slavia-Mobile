@@ -1,7 +1,20 @@
+import org.gradle.api.tasks.compile.JavaCompile
+
 allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+}
+
+// Wycisza ostrzeżenia javac „source/target value 8 is obsolete” z wtyczek bez podniesionego `compileOptions`
+// (bez zmiany wersji bytecode — bezpieczniej niż ręczna zmiana `JavaCompile` przy AGP).
+subprojects {
+    tasks.withType<JavaCompile>().configureEach {
+        val args = options.compilerArgs
+        if (args.none { it == "-Xlint:-options" }) {
+            args.add("-Xlint:-options")
+        }
     }
 }
 
