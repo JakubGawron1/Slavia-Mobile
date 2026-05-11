@@ -9,9 +9,10 @@ import '../models/notification.dart';
 import '../models/competition.dart';
 import '../models/announcement.dart';
 import '../models/chat.dart';
+import '../config/api_base.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://slavia-backend.onrender.com';
+  static String get baseUrl => ApiBase.normalized;
   String? _token;
 
   Future<String?> getToken() async {

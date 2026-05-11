@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Sieć w release: debug/profile mają osobny manifest z INTERNET; main musi to mieć, żeby APK release miał dostęp do API. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Required for Android 13+ (API 33) to show notifications -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
