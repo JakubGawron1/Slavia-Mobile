@@ -9,6 +9,7 @@ import '../models/notification.dart';
 import '../models/competition.dart';
 import '../models/announcement.dart';
 import '../models/chat.dart';
+import '../models/athlete_timeline_item.dart';
 import '../config/api_base.dart';
 
 class ApiService {
@@ -117,6 +118,52 @@ class ApiService {
     }
   }
 
+  Future<void> markNotificationRead(String id) async {
+    final token = await getToken();
+    final response = await http.patch(
+      Uri.parse(
+        '$baseUrl/api/notifications/${Uri.encodeComponent(id)}/read',
+      ),
+      headers: _headers(token),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to mark notification read');
+    }
+  }
+
+  Future<void> markAllNotificationsRead() async {
+    final token = await getToken();
+    final response = await http.patch(
+      Uri.parse('$baseUrl/api/notifications/read-all'),
+      headers: _headers(token),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to mark all read');
+    }
+  }
+
+  Future<void> deleteNotification(String id) async {
+    final token = await getToken();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/notifications/${Uri.encodeComponent(id)}'),
+      headers: _headers(token),
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete notification');
+    }
+  }
+
+  Future<void> deleteAllNotifications() async {
+    final token = await getToken();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/notifications'),
+      headers: _headers(token),
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete all notifications');
+    }
+  }
+
   // Calendar / Competitions
   Future<List<Competition>> getCompetitions() async {
     final token = await getToken();
@@ -171,6 +218,92 @@ class ApiService {
       return data.map((item) => Announcement.fromJson(item)).toList();
     } else {
       throw Exception('Failed to load announcements');
+    }
+  }
+
+  /// Admin / SuperAdmin — pełna lista (nieopublikowane, kolejność).
+  Future<List<Announcement>> getAnnouncementsManage() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/announcements/manage'),
+      headers: _headers(token),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((item) => Announcement.fromJson(item)).toList();
+    }
+    throw Exception('announcements_manage_failed');
+  }
+
+  Future<Announcement> createAnnouncement({
+    required String title,
+    required String body,
+    bool? pinned,
+    int? sortOrder,
+    bool? published,
+  }) async {
+    final token = await getToken();
+    final payload = <String, dynamic>{
+      'title': title.trim(),
+      'body': body,
+      if (pinned != null) 'pinned': pinned,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (published != null) 'published': published,
+    };
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/announcements'),
+      headers: _headers(token),
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return Announcement.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+    throw Exception('create_announcement_failed');
+  }
+
+  Future<Announcement> updateAnnouncement(
+    String id, {
+    required String title,
+    required String body,
+    bool? pinned,
+    int? sortOrder,
+    bool? published,
+  }) async {
+    final token = await getToken();
+    final payload = <String, dynamic>{
+      'title': title.trim(),
+      'body': body,
+      if (pinned != null) 'pinned': pinned,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (published != null) 'published': published,
+    };
+    final response = await http.patch(
+      Uri.parse('$baseUrl/api/announcements/${Uri.encodeComponent(id)}'),
+      headers: _headers(token),
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode == 200) {
+      return Announcement.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+    throw Exception('update_announcement_failed');
+  }
+
+  Future<void> deleteAnnouncement(String id) async {
+    final token = await getToken();
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/announcements/${Uri.encodeComponent(id)}'),
+      headers: _headers(token),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('delete_announcement_failed');
     }
   }
 
@@ -244,11 +377,18 @@ class ApiService {
   }
 
   // Profile Update
-  Future<void> updateProfile({String? avatarUrl, String? password}) async {
+  Future<void> updateProfile({
+    String? avatarUrl,
+    String? password,
+    String? uiThemePreset,
+    String? uiColorMode,
+  }) async {
     final token = await getToken();
     final Map<String, String> body = {};
     if (avatarUrl != null) body['avatar_url'] = avatarUrl;
     if (password != null) body['password'] = password;
+    if (uiThemePreset != null) body['ui_theme_preset'] = uiThemePreset;
+    if (uiColorMode != null) body['ui_color_mode'] = uiColorMode;
 
     final response = await http.patch(
       Uri.parse('$baseUrl/api/auth/profile'),
@@ -554,6 +694,27 @@ class ApiService {
     if (response.statusCode != 200 && response.statusCode != 204) {
       throw Exception('Failed to delete thread: ${response.body}');
     }
+  }
+
+  /// Chronologia wyników, obecności i wpisów dziennika (jak `/athlete/timeline` na WWW).
+  Future<List<AthleteTimelineItem>> getAthleteTimeline(String athleteId) async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse(
+        '$baseUrl/api/athletes/${Uri.encodeComponent(athleteId)}/timeline',
+      ),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data
+          .map(
+            (item) =>
+                AthleteTimelineItem.fromJson(item as Map<String, dynamic>),
+          )
+          .toList();
+    }
+    throw Exception('Failed to load athlete timeline');
   }
 }
 

@@ -10,6 +10,7 @@ import 'user_management_screen.dart';
 import 'athlete_portal_screen.dart';
 import 'superadmin_athlete_manager_screen.dart';
 import 'competition_assignment_screen.dart';
+import 'announcements_manage_screen.dart';
 
 class CalculatorsPage extends StatelessWidget {
   const CalculatorsPage({super.key});
@@ -18,6 +19,12 @@ class CalculatorsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final roles = auth.user?.roles ?? [];
+    /// Starty / zawody — kadra i administracja (jak wcześniej w aplikacji).
+    final canStaffStarts = roles.contains('Trainer') ||
+        roles.contains('Admin') ||
+        roles.contains('SuperAdmin');
+    final isClubAdmin =
+        roles.contains('Admin') || roles.contains('SuperAdmin');
 
     return Scaffold(
       body: CustomScrollView(
@@ -25,12 +32,29 @@ class CalculatorsPage extends StatelessWidget {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
             sliver: SliverToBoxAdapter(
-              child: Text(
-                'Narzędzia',
-                style: GoogleFonts.outfit(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Narzędzia',
+                    style: GoogleFonts.outfit(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Kalkulatory są dostępne dla każdego; reszta wg Twojej roli w klubie.',
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.55),
+                      height: 1.35,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -72,37 +96,43 @@ class CalculatorsPage extends StatelessWidget {
           ),
           _toolCard(
             context,
-            'Złote Proporcje',
-            'Analiza balansu siłowego między bojami.',
+            'Złote proporcje',
+            'Widełki i analiza relacji — jak na stronie klubu.',
             Icons.balance_rounded,
             Colors.blue,
             const ProportionsCalculatorPage(),
           ),
 
-          // Staff tools
-          if (roles.contains('Trainer') ||
-              roles.contains('Admin') ||
-              roles.contains('SuperAdmin')) ...[
+          if (canStaffStarts) ...[
             _sectionHeader(
-              'Narzędzia kadry',
-              Icons.manage_accounts_rounded,
+              'Trener i administracja',
+              Icons.fitness_center_rounded,
               Colors.orange,
-            ),
-            _toolCard(
-              context,
-              'Zarządzanie ogłoszeniami',
-              'Dodawaj i edytuj ogłoszenia klubowe.',
-              Icons.campaign_rounded,
-              Colors.orange,
-              const PlaceholderPage(title: 'Zarządzanie ogłoszeniami'),
             ),
             _toolCard(
               context,
               'Uzupełnianie startów',
-              'Przypisuj zawodników do zawodów.',
+              'Przypisywanie zawodników do zawodów.',
               Icons.assignment_ind_rounded,
               Colors.cyan,
               const CompetitionAssignmentScreen(),
+            ),
+          ],
+
+          // Administracja klubu — API wymaga Admin lub SuperAdmin
+          if (isClubAdmin) ...[
+            _sectionHeader(
+              'Administracja klubu',
+              Icons.admin_panel_settings_rounded,
+              Colors.deepOrange,
+            ),
+            _toolCard(
+              context,
+              'Zarządzanie ogłoszeniami',
+              'Tworzenie, szkice, publikacja — jak w panelu WWW.',
+              Icons.campaign_rounded,
+              Colors.orange,
+              const AnnouncementsManageScreen(),
             ),
           ],
 
@@ -117,7 +147,7 @@ class CalculatorsPage extends StatelessWidget {
               context,
               'Zarządzanie kadrą',
               'Lista kont systemowych i uprawnień.',
-              Icons.admin_panel_settings_rounded,
+              Icons.supervisor_account_rounded,
               Colors.red,
               const UserManagementScreen(),
             ),
@@ -154,7 +184,7 @@ class CalculatorsPage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, size: 16, color: color),
@@ -198,7 +228,7 @@ class CalculatorsPage extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: color.withOpacity(0.12)),
+                border: Border.all(color: color.withValues(alpha: 0.12)),
               ),
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -207,7 +237,7 @@ class CalculatorsPage extends StatelessWidget {
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(icon, color: color, size: 26),
@@ -239,7 +269,7 @@ class CalculatorsPage extends StatelessWidget {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.08),
+                      color: color.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(Icons.chevron_right, color: color, size: 18),
@@ -252,14 +282,4 @@ class CalculatorsPage extends StatelessWidget {
       ),
     );
   }
-}
-
-class PlaceholderPage extends StatelessWidget {
-  final String title;
-  const PlaceholderPage({super.key, required this.title});
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(title)),
-    body: const Center(child: Text('Wkrótce...')),
-  );
 }

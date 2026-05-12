@@ -1,17 +1,27 @@
+import 'dart:async';
+
+import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'services/api_service.dart';
+import 'services/notification_timezone.dart';
 import 'services/push_notification_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'models/auth.dart';
 import 'utils/theme_provider.dart';
+import 'widgets/biometric_gate.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pl_PL', null);
+  await ensureLocalTimezoneInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  final themeProvider = ThemeProvider(prefs);
   final apiService = ApiService();
+  themeProvider.attachApi(apiService);
   final token = await apiService.getToken();
 
   // Init push notifications early so the plugin registers
@@ -20,7 +30,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider.value(value: themeProvider),
         Provider<ApiService>.value(value: apiService),
         ChangeNotifierProvider(create: (_) => AuthProvider(apiService, token)),
         Provider<PushNotificationService>.value(
@@ -32,13 +42,35 @@ void main() async {
   );
 }
 
-class SlaviaApp extends StatelessWidget {
+class SlaviaApp extends StatefulWidget {
   const SlaviaApp({super.key});
 
   @override
+  State<SlaviaApp> createState() => _SlaviaAppState();
+}
+
+class _SlaviaAppState extends State<SlaviaApp> {
+  /// Unikamy wielokrotnego synchronizowania tego samego stanu konta.
+  String? _appearanceSig;
+
+  @override
   Widget build(BuildContext context) {
-    final auth = Provider.of<AuthProvider>(context);
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final auth = context.watch<AuthProvider>();
+    final themeProvider = context.watch<ThemeProvider>();
+    final user = auth.user;
+    if (user != null) {
+      final sig =
+          '${user.id}|${user.uiThemePreset ?? ''}|${user.uiColorMode ?? ''}';
+      if (sig != _appearanceSig) {
+        _appearanceSig = sig;
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
+          await themeProvider.syncFromAuthUser(user);
+        });
+      }
+    } else {
+      _appearanceSig = null;
+    }
 
     return MaterialApp(
       title: 'CKS Slavia',
@@ -46,7 +78,9 @@ class SlaviaApp extends StatelessWidget {
       theme: themeProvider.getTheme(false),
       darkTheme: themeProvider.getTheme(true),
       themeMode: themeProvider.themeMode,
-      home: auth.isAuthenticated ? const MainScreen() : const LoginScreen(),
+      home: auth.isAuthenticated
+          ? const BiometricGate(child: MainScreen())
+          : const LoginScreen(),
     );
   }
 }
@@ -102,6 +136,7 @@ class AuthProvider extends ChangeNotifier {
     _apiService.setToken(null);
     PushNotificationService().stopPolling();
     PushNotificationService().clearSeenIds();
+    unawaited(AppBadgePlus.updateBadge(0));
     _isAuthenticated = false;
     _user = null;
     notifyListeners();

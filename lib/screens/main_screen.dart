@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:animations/animations.dart';
@@ -5,7 +7,10 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../main.dart';
 import '../config/app_brand.dart';
+import '../services/app_shortcuts_service.dart';
 import '../services/app_update_service.dart';
+import '../services/push_notification_service.dart';
+import '../utils/app_shortcuts_bridge.dart';
 import '../ui/slavia_ui.dart';
 import 'dashboard_page.dart';
 import 'announcement_page.dart';
@@ -16,6 +21,7 @@ import 'athlete_list_screen.dart';
 import 'calendar_screen.dart';
 import 'calculators_page.dart';
 import 'chat_screen.dart';
+import 'training_log_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -31,7 +37,32 @@ class _MainScreenState extends State<MainScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await AppShortcutsService.instance.ensureInitialized();
+      final pending = AppShortcutsBridge.takePending();
+      if (!mounted) return;
+      if (pending == 'shortcut_chat') {
+        await Navigator.push<void>(
+          context,
+          MaterialPageRoute<void>(builder: (_) => const ChatScreen()),
+        );
+      } else if (pending == 'shortcut_training') {
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        final roles = auth.user?.roles ?? [];
+        if (roles.contains('Athlete')) {
+          await Navigator.push<void>(
+            context,
+            MaterialPageRoute<void>(
+              builder: (_) => const TrainingLogScreen(),
+            ),
+          );
+        } else {
+          setState(() => _currentIndex = 2);
+        }
+      }
+      if (!mounted) return;
+      unawaited(PushNotificationService().refreshBadgeFromApi());
       if (!mounted) return;
       AppUpdateService.instance.checkAndOfferUpdate(context);
     });
@@ -157,6 +188,94 @@ class _MainScreenState extends State<MainScreen>
                     ),
                   ),
                 ),
+              if (AppBrand.hasPublicSite) ...[
+                ListTile(
+                  leading: Icon(Icons.article_outlined, color: cs.primary),
+                  title: Text(
+                    'Aktualności',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: Text(
+                    'Blog klubu na stronie WWW',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: cs.onSurface.withValues(alpha: 0.55),
+                    ),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final ok = await AppBrand.openClubPath('/aktualnosci');
+                    if (context.mounted && !ok) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Nie udało się otworzyć aktualności.',
+                            style: GoogleFonts.outfit(),
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                ListTile(
+                  leading:
+                      Icon(Icons.photo_library_outlined, color: cs.tertiary),
+                  title: Text(
+                    'Galeria',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: Text(
+                    'Zdjęcia z treningów i zawodów',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: cs.onSurface.withValues(alpha: 0.55),
+                    ),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final ok = await AppBrand.openClubPath('/galeria');
+                    if (context.mounted && !ok) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Nie udało się otworzyć galerii.',
+                            style: GoogleFonts.outfit(),
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                ListTile(
+                  leading:
+                      Icon(Icons.event_note_rounded, color: cs.primary),
+                  title: Text(
+                    'Kalendarz klubu',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: Text(
+                    'Wydarzenia publiczne na WWW',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: cs.onSurface.withValues(alpha: 0.55),
+                    ),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final ok = await AppBrand.openClubPath('/kalendarz');
+                    if (context.mounted && !ok) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Nie udało się otworzyć kalendarza.',
+                            style: GoogleFonts.outfit(),
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ],
               ListTile(
                 leading: Icon(
                   Icons.chat_bubble_outline_rounded,
@@ -316,7 +435,7 @@ class _MainScreenState extends State<MainScreen>
               bottom: BorderSide(
                 color: Theme.of(
                   context,
-                ).colorScheme.outlineVariant.withOpacity(0.15),
+                ).colorScheme.outlineVariant.withValues(alpha: 0.15),
               ),
             ),
           ),
@@ -347,7 +466,7 @@ class _MainScreenState extends State<MainScreen>
                     height: 36,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [primary, primary.withOpacity(0.7)],
+                        colors: [primary, primary.withValues(alpha: 0.7)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -407,7 +526,7 @@ class _MainScreenState extends State<MainScreen>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: primary.withOpacity(0.4),
+                          color: primary.withValues(alpha: 0.4),
                           width: 2,
                         ),
                         image: profileImg != null
@@ -416,7 +535,7 @@ class _MainScreenState extends State<MainScreen>
                                 fit: BoxFit.cover,
                               )
                             : null,
-                        color: primary.withOpacity(0.1),
+                        color: primary.withValues(alpha: 0.1),
                       ),
                       child: profileImg == null
                           ? Center(
@@ -441,16 +560,30 @@ class _MainScreenState extends State<MainScreen>
           ),
         ),
       ),
-      body: PageTransitionSwitcher(
-        duration: const Duration(milliseconds: 350),
-        transitionBuilder: (child, primaryAnimation, secondaryAnimation) {
-          return FadeThroughTransition(
-            animation: primaryAnimation,
-            secondaryAnimation: secondaryAnimation,
-            child: child,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: constraints.maxWidth,
+                maxHeight: constraints.maxHeight,
+              ),
+              child: PageTransitionSwitcher(
+                duration: const Duration(milliseconds: 350),
+                transitionBuilder:
+                    (child, primaryAnimation, secondaryAnimation) {
+                  return FadeThroughTransition(
+                    animation: primaryAnimation,
+                    secondaryAnimation: secondaryAnimation,
+                    child: child,
+                  );
+                },
+                child: _pages[_currentIndex],
+              ),
+            ),
           );
         },
-        child: _pages[_currentIndex],
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -459,7 +592,7 @@ class _MainScreenState extends State<MainScreen>
             top: BorderSide(
               color: Theme.of(
                 context,
-              ).colorScheme.outlineVariant.withOpacity(0.15),
+              ).colorScheme.outlineVariant.withValues(alpha: 0.15),
             ),
           ),
         ),
@@ -523,7 +656,7 @@ class _NavButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: isSelected
             ? BoxDecoration(
-                color: primary.withOpacity(0.12),
+                color: primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
               )
             : null,
@@ -537,7 +670,7 @@ class _NavButton extends StatelessWidget {
                 key: ValueKey(isSelected),
                 color: isSelected
                     ? primary
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                 size: 24,
               ),
             ),
@@ -549,7 +682,7 @@ class _NavButton extends StatelessWidget {
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected
                     ? primary
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -572,13 +705,13 @@ class _AppBarIconBtn extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(
           icon,
           size: 20,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
         ),
       ),
     );

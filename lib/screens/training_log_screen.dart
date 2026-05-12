@@ -136,9 +136,12 @@ class _TrainingLogScreenState extends State<TrainingLogScreen> {
                   _notesController.text,
                   _titleController.text,
                 );
+                if (!context.mounted) return;
                 Navigator.pop(context);
+                if (!mounted) return;
                 setState(() {}); // Refresh
               } catch (e) {
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(
                   context,
                 ).showSnackBar(SnackBar(content: Text('Błąd: $e')));

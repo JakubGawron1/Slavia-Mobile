@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../main.dart';
 import '../services/api_service.dart';
 import '../models/announcement.dart';
+import '../models/athlete.dart';
+import '../utils/training_streak.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'announcement_page.dart';
@@ -13,6 +15,15 @@ import 'proportions_calculator_page.dart';
 import 'sinclair_calculator_page.dart';
 import '../ui/slavia_ui.dart';
 import 'training_log_screen.dart';
+
+String _primaryRoleLabel(List<String> roles) {
+  if (roles.contains('SuperAdmin')) return 'SuperAdmin';
+  if (roles.contains('Admin')) return 'Administrator';
+  if (roles.contains('Trainer')) return 'Trener';
+  if (roles.contains('Athlete')) return 'Zawodnik';
+  if (roles.isEmpty) return 'Konto';
+  return roles.first;
+}
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -50,7 +61,7 @@ class DashboardPage extends StatelessWidget {
                   _QuickStatCard(
                     icon: Icons.bolt,
                     label: 'Aktywny',
-                    value: auth.user?.roles.first ?? 'Zawodnik',
+                    value: _primaryRoleLabel(auth.user?.roles ?? []),
                     primary: primary,
                   ),
                   const SizedBox(width: 12),
@@ -64,6 +75,31 @@ class DashboardPage extends StatelessWidget {
               ),
             ),
           ),
+
+          if (auth.user?.roles.contains('Athlete') == true &&
+              (auth.user?.athleteId ?? '').isNotEmpty)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+              sliver: SliverToBoxAdapter(
+                child: FutureBuilder<List<TrainingLogEntry>>(
+                  future: apiService.getTrainingLog(auth.user!.athleteId!),
+                  builder: (context, snap) {
+                    if (snap.connectionState == ConnectionState.waiting &&
+                        !snap.hasData) {
+                      return const SizedBox.shrink();
+                    }
+                    if (snap.hasError || !snap.hasData) {
+                      return const SizedBox.shrink();
+                    }
+                    final streak = computeTrainingLogStreak(snap.data!);
+                    return _TrainingStreakBanner(
+                      streak: streak,
+                      primary: primary,
+                    );
+                  },
+                ),
+              ),
+            ),
 
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
@@ -131,7 +167,7 @@ class DashboardPage extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: primary.withOpacity(0.1),
+                          color: primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -215,13 +251,13 @@ class DashboardPage extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             primary,
-            primary.withOpacity(0.75),
+            primary.withValues(alpha: 0.75),
             Theme.of(context).colorScheme.secondary,
           ],
         ),
         boxShadow: [
           BoxShadow(
-            color: primary.withOpacity(0.35),
+            color: primary.withValues(alpha: 0.35),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -265,7 +301,7 @@ class DashboardPage extends StatelessWidget {
                           'CKS Slavia Ruda Śląska',
                           style: GoogleFonts.outfit(
                             fontSize: 13,
-                            color: Colors.white.withOpacity(0.75),
+                            color: Colors.white.withValues(alpha: 0.75),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -278,12 +314,12 @@ class DashboardPage extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.4),
+                          color: Colors.white.withValues(alpha: 0.4),
                           width: 3,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
+                            color: Colors.black.withValues(alpha: 0.2),
                             blurRadius: 12,
                           ),
                         ],
@@ -300,9 +336,9 @@ class DashboardPage extends StatelessWidget {
                       height: 64,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.4),
+                          color: Colors.white.withValues(alpha: 0.4),
                           width: 3,
                         ),
                       ),
@@ -321,6 +357,59 @@ class DashboardPage extends StatelessWidget {
                 ],
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrainingStreakBanner extends StatelessWidget {
+  final int streak;
+  final Color primary;
+
+  const _TrainingStreakBanner({
+    required this.streak,
+    required this.primary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final label = streak <= 0
+        ? 'Zapisuj treningi w dzienniku — zbuduj serię kolejnych dni.'
+        : streak == 1
+            ? 'Seria treningów: 1 dzień z rzędu.'
+            : 'Seria treningów: $streak dni z rzędu — tak trzymaj.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [
+            primary.withValues(alpha: 0.18),
+            cs.secondary.withValues(alpha: 0.10),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: primary.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.local_fire_department_rounded, color: primary, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                height: 1.35,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
@@ -439,7 +528,7 @@ class _QuickAccessRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: primary.withOpacity(0.12)),
+              border: Border.all(color: primary.withValues(alpha: 0.12)),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -447,7 +536,7 @@ class _QuickAccessRow extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: accent.withOpacity(0.15),
+                    color: accent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(icon, color: accent, size: 22),
@@ -493,7 +582,7 @@ class _QuickStatCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: primary.withOpacity(0.1)),
+          border: Border.all(color: primary.withValues(alpha: 0.1)),
         ),
         child: Row(
           children: [
@@ -501,7 +590,7 @@ class _QuickStatCard extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: primary.withOpacity(0.12),
+                color: primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, size: 18, color: primary),
@@ -564,7 +653,7 @@ class _AnnouncementCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: primary.withOpacity(0.08)),
+          border: Border.all(color: primary.withValues(alpha: 0.08)),
         ),
         child: Material(
           color: Colors.transparent,
@@ -628,7 +717,7 @@ class _AnnouncementCard extends StatelessWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: primary.withOpacity(0.1),
+                      color: primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(Icons.campaign, color: primary, size: 22),
@@ -679,8 +768,8 @@ class _AnnouncementSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final base = isDark
-        ? Colors.white.withOpacity(0.06)
-        : Colors.black.withOpacity(0.06);
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.06);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),

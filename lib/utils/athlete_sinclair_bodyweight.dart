@@ -16,8 +16,9 @@ double effectiveBodyweightKgForSinclair({
   double? bodyweight,
   String? weightCategory,
 }) {
-  if (bodyweight != null && bodyweight.isFinite && bodyweight > 0)
+  if (bodyweight != null && bodyweight.isFinite && bodyweight > 0) {
     return bodyweight;
+  }
   final fromCat = parseWeightCategoryLimitKg(weightCategory);
   return fromCat > 0 ? fromCat : 0;
 }

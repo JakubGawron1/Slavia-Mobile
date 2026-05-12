@@ -30,4 +30,18 @@ abstract final class AppBrand {
     if (u == null) return false;
     return launchUrl(u, mode: LaunchMode.externalApplication);
   }
+
+  /// Podstrona frontu Nuxt, np. `/galeria`, `/kontakt`, `/kalendarz`.
+  static Uri? clubUri(String path) {
+    final base = publicSiteUri;
+    if (base == null) return null;
+    final p = path.startsWith('/') ? path : '/$path';
+    return base.resolve(p);
+  }
+
+  static Future<bool> openClubPath(String path) async {
+    final u = clubUri(path);
+    if (u == null) return false;
+    return launchUrl(u, mode: LaunchMode.externalApplication);
+  }
 }

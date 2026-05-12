@@ -7,6 +7,7 @@ import '../models/auth.dart';
 import '../services/api_service.dart';
 import '../ui/slavia_ui.dart';
 import '../utils/athlete_analytics.dart';
+import '../screens/athlete_timeline_screen.dart';
 import 'athlete_charts.dart';
 
 class AthleteOverviewTab extends StatefulWidget {
@@ -163,6 +164,70 @@ class _AthleteOverviewTabState extends State<AthleteOverviewTab> {
                       ),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Material(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(SlaviaUi.radiusLg),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(SlaviaUi.radiusLg),
+                  onTap: () {
+                    Navigator.push<void>(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) => AthleteTimelineScreen(
+                          athleteId: widget.athleteId,
+                          subtitle: a.fullName,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.timeline_rounded, color: primary),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Oś czasu',
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Wyniki zawodów, obecność, wpisy dziennika — jak na WWW',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  height: 1.35,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.58),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.35),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -675,7 +740,8 @@ class _InfoTable extends StatelessWidget {
 
 bool canViewAthleteTrainingData(String athleteId, AuthProvider auth) {
   final roles = auth.user?.roles ?? [];
-  if (roles.any((r) => r == 'Trainer' || r == 'Admin' || r == 'SuperAdmin'))
+  if (roles.any((r) => r == 'Trainer' || r == 'Admin' || r == 'SuperAdmin')) {
     return true;
+  }
   return auth.user?.athleteId == athleteId;
 }

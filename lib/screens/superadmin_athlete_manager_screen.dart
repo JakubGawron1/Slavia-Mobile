@@ -28,10 +28,12 @@ class _SuperAdminAthleteManagerScreenState
       body: FutureBuilder<List<Athlete>>(
         future: apiService.getAthletes(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError)
+          }
+          if (snapshot.hasError) {
             return Center(child: Text('Błąd: ${snapshot.error}'));
+          }
           final athletes = snapshot.data ?? [];
           return ListView.builder(
             padding: const EdgeInsets.all(16),
@@ -59,9 +61,12 @@ class _SuperAdminAthleteManagerScreenState
                   ),
                   trailing: PopupMenuButton<String>(
                     onSelected: (val) {
-                      if (val == 'edit')
+                      if (val == 'edit') {
                         _showAthleteDialog(apiService, athlete: a);
-                      if (val == 'delete') _showDeleteConfirm(a, apiService);
+                      }
+                      if (val == 'delete') {
+                        _showDeleteConfirm(a, apiService);
+                      }
                     },
                     itemBuilder: (context) => [
                       const PopupMenuItem(value: 'edit', child: Text('Edytuj')),
@@ -145,9 +150,12 @@ class _SuperAdminAthleteManagerScreenState
                 } else {
                   await apiService.updateAthlete(athlete.id, data);
                 }
+                if (!context.mounted) return;
                 Navigator.pop(context);
+                if (!mounted) return;
                 setState(() {});
               } catch (e) {
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(
                   context,
                 ).showSnackBar(SnackBar(content: Text('Błąd: $e')));
@@ -177,9 +185,12 @@ class _SuperAdminAthleteManagerScreenState
             onPressed: () async {
               try {
                 await apiService.deleteAthlete(athlete.id);
+                if (!context.mounted) return;
                 Navigator.pop(context);
+                if (!mounted) return;
                 setState(() {});
               } catch (e) {
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(
                   context,
                 ).showSnackBar(SnackBar(content: Text('Błąd: $e')));

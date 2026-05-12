@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../main.dart';
 import '../ui/slavia_ui.dart';
+import '../utils/network_feedback.dart';
+import 'demo_shell_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -182,6 +184,22 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 14),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.push<void>(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => const DemoShellScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.visibility_outlined),
+                        label: Text(
+                          'Tryb demonstracyjny',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                        ),
+                      ),
                       const SizedBox(height: 24),
                       Text(
                         'Treningi · wyniki · kalendarz — w jednym miejscu.',
@@ -215,7 +233,10 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             behavior: SnackBarBehavior.floating,
-            content: Text('Błąd logowania: $e', style: GoogleFonts.outfit()),
+            content: Text(
+              'Błąd logowania: ${friendlyNetworkError(e)}',
+              style: GoogleFonts.outfit(),
+            ),
           ),
         );
       }

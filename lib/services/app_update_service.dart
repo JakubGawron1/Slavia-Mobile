@@ -120,17 +120,22 @@ class AppUpdateService {
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-          title: const Text('Dostępna nowa wersja'),
+          title: const Text('Nowa wersja aplikacji Slavia'),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
+                  'Ta sama aplikacja co na stronie klubu — zalecamy aktualizację z najnowszego wydania.',
+                  style: Theme.of(ctx).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                Text(
                   'Zainstalowana: ${info.version} (build ${info.buildNumber})',
                 ),
                 const SizedBox(height: 8),
-                Text('Na GitHubie: ${rel.tagName}'),
+                Text('Wydanie na GitHubie: ${rel.tagName}'),
                 if (rel.name.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
@@ -145,7 +150,7 @@ class AppUpdateService {
                 if (Platform.isIOS) ...[
                   const SizedBox(height: 12),
                   const Text(
-                    'Na iOS pobierz aktualizację z App Store lub strony release.',
+                    'Na iPhone/iPad zwykle aktualizacja trafia przez TestFlight lub dystrybucję przygotowaną przez klub — ten sam kanał co strona www.',
                     style: TextStyle(fontSize: 12),
                   ),
                 ],
@@ -163,8 +168,9 @@ class AppUpdateService {
             TextButton(
               onPressed: () async {
                 final u = Uri.tryParse(rel.htmlUrl);
-                if (u != null)
+                if (u != null) {
                   await launchUrl(u, mode: LaunchMode.externalApplication);
+                }
               },
               child: const Text('Strona wydania'),
             ),

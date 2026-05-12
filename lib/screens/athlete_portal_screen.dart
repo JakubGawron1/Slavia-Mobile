@@ -149,7 +149,7 @@ class _AthletePortalScreenState extends State<AthletePortalScreen>
             gradient: LinearGradient(
               colors: [
                 primary,
-                primary.withOpacity(0.6),
+                primary.withValues(alpha: 0.6),
                 Theme.of(context).colorScheme.secondary,
               ],
               begin: Alignment.topLeft,
@@ -163,7 +163,7 @@ class _AthletePortalScreenState extends State<AthletePortalScreen>
                 children: [
                   CircleAvatar(
                     radius: 36,
-                    backgroundColor: Colors.white.withOpacity(0.2),
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
                     backgroundImage: a?.imageUrl != null
                         ? NetworkImage(a!.imageUrl!)
                         : null,
@@ -196,7 +196,7 @@ class _AthletePortalScreenState extends State<AthletePortalScreen>
                           Text(
                             '${a!.weightCategory} · ${a.birthYear ?? ''}',
                             style: GoogleFonts.outfit(
-                              color: Colors.white.withOpacity(0.75),
+                              color: Colors.white.withValues(alpha: 0.75),
                               fontSize: 13,
                             ),
                           ),
@@ -390,12 +390,15 @@ class _AthletePortalScreenState extends State<AthletePortalScreen>
                           cleanAndJerk: c > 0 ? c : null,
                           total: s + c,
                         );
+                        if (!mounted) return;
+                        if (!ctx.mounted) return;
                         Navigator.pop(ctx);
                         setState(() => _refreshResults = !_refreshResults);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Wynik zgłoszony ✓')),
                         );
                       } catch (e) {
+                        if (!mounted) return;
                         ScaffoldMessenger.of(
                           context,
                         ).showSnackBar(SnackBar(content: Text('Błąd: $e')));
@@ -440,7 +443,7 @@ class _TypeChip extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? primary : primary.withOpacity(0.08),
+          color: isSelected ? primary : primary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
@@ -555,7 +558,7 @@ class _ResultsTab extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: primary.withOpacity(0.1)),
+                border: Border.all(color: primary.withValues(alpha: 0.1)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -578,7 +581,7 @@ class _ResultsTab extends StatelessWidget {
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.1),
+                            color: statusColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -683,7 +686,7 @@ class _ResultBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -692,7 +695,7 @@ class _ResultBadge extends StatelessWidget {
             label,
             style: GoogleFonts.outfit(
               fontSize: 10,
-              color: color.withOpacity(0.8),
+              color: color.withValues(alpha: 0.8),
             ),
           ),
           Text(

@@ -48,7 +48,9 @@ class _SinclairCalculatorPageState extends State<SinclairCalculatorPage> {
             Text(
               'Przelicznik na okres 2025–2028',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.onSurface.withValues(
+                  alpha: 0.5,
+                ),
               ),
               textAlign: TextAlign.center,
             ),
@@ -61,7 +63,7 @@ class _SinclairCalculatorPageState extends State<SinclairCalculatorPage> {
                 border: Border.all(
                   color: Theme.of(
                     context,
-                  ).colorScheme.outlineVariant.withOpacity(0.2),
+                  ).colorScheme.outlineVariant.withValues(alpha: 0.2),
                 ),
               ),
               child: Column(
@@ -108,7 +110,8 @@ class _SinclairCalculatorPageState extends State<SinclairCalculatorPage> {
 
   Widget _buildDropdown() {
     return DropdownButtonFormField<SinclairGender>(
-      value: _gender,
+      key: ValueKey(_gender),
+      initialValue: _gender,
       decoration: const InputDecoration(
         labelText: 'Płeć',
         border: OutlineInputBorder(
@@ -153,9 +156,9 @@ class _SinclairCalculatorPageState extends State<SinclairCalculatorPage> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -164,7 +167,7 @@ class _SinclairCalculatorPageState extends State<SinclairCalculatorPage> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: color.withOpacity(0.8),
+              color: color.withValues(alpha: 0.8),
             ),
           ),
           const SizedBox(height: 12),
@@ -188,7 +191,9 @@ class _SinclairCalculatorPageState extends State<SinclairCalculatorPage> {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.2),
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -200,7 +205,9 @@ class _SinclairCalculatorPageState extends State<SinclairCalculatorPage> {
               'Przelicznik zgodny z oficjalnym wzorem IWF na lata 2025–2028.',
               style: TextStyle(
                 fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(
+                  alpha: 0.6,
+                ),
               ),
             ),
           ),

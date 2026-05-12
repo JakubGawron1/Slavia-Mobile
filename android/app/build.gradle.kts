@@ -5,8 +5,43 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+/** Katalog główny repo (folder zawierający `pubspec.yaml`). */
+val repoRoot: java.io.File = rootProject.projectDir.parentFile!!
+
+/**
+ * Wersja **versionName**: najwyższy tag semver w Git (`git tag --sort=-version:refname`).
+ * **versionCode**: `git rev-list --count HEAD` (monotoniczny przyrost przy każdym commicie).
+ * Przed buildem warto `git fetch --tags`, żeby lokalnie mieć te same tagi co GitHub.
+ * Gdy Git niedostępny — wartości z `pubspec.yaml` (Flutter).
+ */
+fun gitStdout(vararg args: String): String? {
+    return try {
+        val proc =
+            ProcessBuilder(listOf("git", *args))
+                .directory(repoRoot)
+                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .start()
+        val text =
+            proc.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        proc.waitFor()
+        if (proc.exitValue() != 0) null else text.trim().takeIf { it.isNotEmpty() }
+    } catch (_: Exception) {
+        null
+    }
+}
+
+fun gitLatestTagAsVersionName(): String? {
+    val raw =
+        gitStdout("tag", "-l", "--sort=-version:refname") ?: return null
+    val first =
+        raw.lineSequence().firstOrNull { it.isNotBlank() }?.trim() ?: return null
+    return first.removePrefix("v").removePrefix("V").trim().takeIf { it.isNotEmpty() }
+}
+
+fun gitRevCount(): Int? = gitStdout("rev-list", "--count", "HEAD")?.toIntOrNull()
+
 android {
-    namespace = "com.example.slavia_mobile"
+    namespace = "com.jakubgawron.cksslavia"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,14 +56,14 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.slavia_mobile"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "com.jakubgawron.cksslavia"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+
+        val tagVer = gitLatestTagAsVersionName()
+        val commits = gitRevCount()
+        versionName = tagVer ?: flutter.versionName
+        versionCode = commits ?: flutter.versionCode
     }
 
     buildTypes {

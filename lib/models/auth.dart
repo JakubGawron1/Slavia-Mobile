@@ -29,6 +29,10 @@ class AuthUser {
   final String? athleteId;
   final String? athleteImageUrl;
   final String? email;
+  /// Jak `/profil` na WWW — motyw zapisany na koncie.
+  final String? uiThemePreset;
+  final String? uiColorMode;
+  final String? athleteGender;
 
   AuthUser({
     required this.id,
@@ -41,6 +45,9 @@ class AuthUser {
     this.athleteId,
     this.athleteImageUrl,
     this.email,
+    this.uiThemePreset,
+    this.uiColorMode,
+    this.athleteGender,
   });
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
@@ -55,6 +62,9 @@ class AuthUser {
       athleteId: json['athlete_id'],
       athleteImageUrl: json['athlete_image_url'],
       email: json['email'],
+      uiThemePreset: json['ui_theme_preset'] as String?,
+      uiColorMode: json['ui_color_mode'] as String?,
+      athleteGender: json['athlete_gender'] as String?,
     );
   }
 }

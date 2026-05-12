@@ -1,9 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../main.dart';
 import '../utils/theme_provider.dart';
+import '../ui/slavia_ui.dart';
+import '../widgets/biometric_gate.dart';
 import '../services/api_service.dart';
 import '../services/app_update_service.dart';
 import '../config/mobile_github_release.dart';
@@ -21,6 +25,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final _confirmPasswordController = TextEditingController();
   bool _isSaving = false;
   bool _isUploading = false;
+  bool _biometricUnlock = false;
 
   @override
   void initState() {
@@ -28,6 +33,15 @@ class _ProfilePageState extends State<ProfilePage> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     _avatarUrlController.text =
         auth.user?.avatarUrl ?? auth.user?.athleteImageUrl ?? '';
+    _loadBiometricPref();
+  }
+
+  Future<void> _loadBiometricPref() async {
+    final p = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(
+      () => _biometricUnlock = p.getBool(kBiometricUnlockPrefKey) ?? false,
+    );
   }
 
   Future<void> _pickAndUploadImage(
@@ -51,15 +65,17 @@ class _ProfilePageState extends State<ProfilePage> {
       // Optionally auto-save to profile
       await apiService.updateProfile(avatarUrl: url);
       await auth.refreshMe();
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Zdjęcie wgrane i zapisane.')),
         );
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Błąd uploadu: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }
@@ -127,7 +143,26 @@ class _ProfilePageState extends State<ProfilePage> {
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
+            _buildSection(context, 'Bezpieczeństwo na urządzeniu', [
+              SwitchListTile.adaptive(
+                secondary: Icon(
+                  Icons.fingerprint_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                title: const Text('Odblokowanie biometrią'),
+                subtitle: const Text(
+                  'Po powrocie z innej aplikacji — Face ID, odcisk lub kod urządzenia.',
+                ),
+                value: _biometricUnlock,
+                onChanged: (v) async {
+                  final p = await SharedPreferences.getInstance();
+                  await p.setBool(kBiometricUnlockPrefKey, v);
+                  if (mounted) setState(() => _biometricUnlock = v);
+                },
+              ),
+            ]),
+            const SizedBox(height: 24),
             _buildSection(context, 'Ustawienia konta', [
               Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -190,66 +225,182 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ]),
             const SizedBox(height: 24),
-            _buildSection(context, 'Wygląd aplikacji', [
-              ListTile(
-                title: const Text('Tryb Ciemny'),
-                trailing: Switch(
-                  value: themeProvider.themeMode == ThemeMode.dark,
-                  onChanged: (val) {
-                    themeProvider.setThemeMode(
-                      val ? ThemeMode.dark : ThemeMode.light,
-                    );
-                  },
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+                decoration: SlaviaUi.cardShell(
+                  context,
+                  borderTint: Theme.of(context).colorScheme.primary,
+                  radius: SlaviaUi.radiusXl,
                 ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text(
-                  'Motyw kolorystyczny',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 60,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: SlaviaPreset.values.map((preset) {
-                    final isSelected = themeProvider.preset == preset;
-                    return GestureDetector(
-                      onTap: () => themeProvider.setPreset(preset),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 12),
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: _getPresetPreviewColor(preset),
-                          shape: BoxShape.circle,
-                          border: isSelected
-                              ? Border.all(color: Colors.white, width: 3)
-                              : null,
-                          boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: _getPresetPreviewColor(
-                                      preset,
-                                    ).withOpacity(0.5),
-                                    blurRadius: 10,
-                                  ),
-                                ]
-                              : null,
-                        ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SlaviaUi.homeBadge(context, 'Jak na stronie klubu'),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Wygląd aplikacji',
+                      style: GoogleFonts.outfit(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
                       ),
-                    );
-                  }).toList(),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Preset i tryb jasny/ciemny zapisują się na tym urządzeniu. '
+                      'Po zalogowaniu mogą też zapisać się na koncie — tak jak w przeglądarce.',
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        height: 1.45,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.62),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    SlaviaUi.sectionHeader(
+                      context,
+                      'Jasność ekranu',
+                      accent: Theme.of(context).colorScheme.secondary,
+                      icon: Icons.brightness_6_rounded,
+                    ),
+                    SegmentedButton<ThemeMode>(
+                      segments: const [
+                        ButtonSegment(
+                          value: ThemeMode.system,
+                          label: Text('System'),
+                          icon: Icon(Icons.settings_suggest_outlined, size: 18),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.light,
+                          label: Text('Jasny'),
+                          icon: Icon(Icons.light_mode_outlined, size: 18),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.dark,
+                          label: Text('Ciemny'),
+                          icon: Icon(Icons.dark_mode_outlined, size: 18),
+                        ),
+                      ],
+                      selected: {themeProvider.themeMode},
+                      onSelectionChanged: (next) {
+                        if (next.isEmpty) return;
+                        themeProvider.setThemeMode(next.first);
+                      },
+                    ),
+                    const SizedBox(height: 22),
+                    SlaviaUi.sectionHeader(
+                      context,
+                      'Preset kolorystyczny',
+                      accent: Theme.of(context).colorScheme.primary,
+                      icon: Icons.palette_outlined,
+                    ),
+                    const SizedBox(height: 6),
+                    ...SlaviaAppearanceLabels.displayOrder.map((preset) {
+                      final selected = themeProvider.preset == preset;
+                      final accent = themeProvider.previewAccent(preset);
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Material(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius:
+                              BorderRadius.circular(SlaviaUi.radiusMd),
+                          child: InkWell(
+                            borderRadius:
+                                BorderRadius.circular(SlaviaUi.radiusMd),
+                            onTap: () => themeProvider.setPreset(preset),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius:
+                                    BorderRadius.circular(SlaviaUi.radiusMd),
+                                border: Border.all(
+                                  color: selected
+                                      ? accent.withValues(alpha: 0.65)
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .outline
+                                          .withValues(alpha: 0.25),
+                                  width: selected ? 2 : 1,
+                                ),
+                                color: selected
+                                    ? accent.withValues(alpha: 0.08)
+                                    : null,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: accent,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: accent.withValues(
+                                            alpha: 0.35,
+                                          ),
+                                          blurRadius: 10,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          SlaviaAppearanceLabels.title(
+                                            preset,
+                                          ),
+                                          style: GoogleFonts.outfit(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          SlaviaAppearanceLabels.subtitle(
+                                            preset,
+                                          ),
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 12,
+                                            height: 1.35,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.58),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (selected)
+                                    Icon(
+                                      Icons.check_circle_rounded,
+                                      color: accent,
+                                      size: 22,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-            ]),
+            ),
             const SizedBox(height: 24),
             _buildSection(context, 'Aktualizacje', [
               ListTile(
@@ -290,7 +441,8 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+          color:
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
           width: 4,
         ),
       ),
@@ -356,40 +508,20 @@ class _ProfilePageState extends State<ProfilePage> {
             : null,
       );
       await auth.refreshMe();
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Konto zaktualizowane')));
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Błąd zapisu: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
   }
 
-  Color _getPresetPreviewColor(SlaviaPreset preset) {
-    switch (preset) {
-      case SlaviaPreset.slavia:
-        return const Color(0xFF00DC82);
-      case SlaviaPreset.iron:
-        return const Color(0xFF38BDF8);
-      case SlaviaPreset.arena:
-        return const Color(0xFFFBBF24);
-      case SlaviaPreset.ruby:
-        return const Color(0xFFEF4444);
-      case SlaviaPreset.blackgym:
-        return Colors.green;
-      case SlaviaPreset.platform:
-        return const Color(0xFF34D399);
-      case SlaviaPreset.midnight:
-        return const Color(0xFF6366F1);
-      case SlaviaPreset.neon:
-        return const Color(0xFFD946EF);
-      case SlaviaPreset.pink:
-        return const Color(0xFFEC4899);
-    }
-  }
 }

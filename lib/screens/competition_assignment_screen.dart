@@ -29,10 +29,12 @@ class _CompetitionAssignmentScreenState
       body: FutureBuilder<List<Competition>>(
         future: apiService.getCompetitions(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError)
+          }
+          if (snapshot.hasError) {
             return Center(child: Text('Błąd: ${snapshot.error}'));
+          }
           final competitions = snapshot.data ?? [];
           return ListView.builder(
             padding: const EdgeInsets.all(16),
@@ -47,7 +49,7 @@ class _CompetitionAssignmentScreenState
                   side: BorderSide(
                     color: Theme.of(
                       context,
-                    ).colorScheme.primary.withOpacity(0.1),
+                    ).colorScheme.primary.withValues(alpha: 0.1),
                   ),
                 ),
                 child: InkWell(
@@ -63,7 +65,7 @@ class _CompetitionAssignmentScreenState
                           decoration: BoxDecoration(
                             color: Theme.of(
                               context,
-                            ).colorScheme.primary.withOpacity(0.1),
+                            ).colorScheme.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Icon(
@@ -138,8 +140,9 @@ class _CompetitionAssignmentScreenState
       builder: (context) => FutureBuilder<List<Athlete>>(
         future: apiService.getAthletes(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
           final athletes = snapshot.data!;
           return AlertDialog(
             title: Text('Przypisz do: ${competition.title}'),
@@ -164,11 +167,13 @@ class _CompetitionAssignmentScreenState
                           location: competition.location,
                           total: 0, // Placeholder
                         );
+                        if (!context.mounted) return;
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Przypisano ${a.fullName}')),
                         );
                       } catch (e) {
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(
                           context,
                         ).showSnackBar(SnackBar(content: Text('Błąd: $e')));

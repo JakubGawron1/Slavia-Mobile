@@ -54,7 +54,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   leading: CircleAvatar(
                     backgroundColor: Theme.of(
                       context,
-                    ).colorScheme.primary.withOpacity(0.1),
+                    ).colorScheme.primary.withValues(alpha: 0.1),
                     child: Text(
                       user.username.substring(0, 1).toUpperCase(),
                       style: TextStyle(
@@ -86,10 +86,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: _getRoleColor(r).withOpacity(0.1),
+                                  color: _getRoleColor(r).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: _getRoleColor(r).withOpacity(0.3),
+                                    color: _getRoleColor(r).withValues(
+                                      alpha: 0.3,
+                                    ),
                                   ),
                                 ),
                                 child: Text(
@@ -108,9 +110,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   ),
                   trailing: PopupMenuButton<String>(
                     onSelected: (val) {
-                      if (val == 'edit_roles')
+                      if (val == 'edit_roles') {
                         _showEditRolesDialog(user, apiService);
-                      if (val == 'delete') _showDeleteConfirm(user, apiService);
+                      }
+                      if (val == 'delete') {
+                        _showDeleteConfirm(user, apiService);
+                      }
                     },
                     itemBuilder: (context) => [
                       const PopupMenuItem(
@@ -172,10 +177,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         value: selectedRoles.contains(role),
                         onChanged: (val) {
                           setDialogState(() {
-                            if (val == true)
+                            if (val == true) {
                               selectedRoles.add(role);
-                            else
+                            } else {
                               selectedRoles.remove(role);
+                            }
                           });
                         },
                       ),
@@ -197,9 +203,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     passCtrl.text,
                     selectedRoles,
                   );
+                  if (!context.mounted) return;
                   Navigator.pop(context);
+                  if (!mounted) return;
                   setState(() {});
                 } catch (e) {
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(
                     context,
                   ).showSnackBar(SnackBar(content: Text('Błąd: $e')));
@@ -230,10 +239,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     value: selectedRoles.contains(role),
                     onChanged: (val) {
                       setDialogState(() {
-                        if (val == true)
+                        if (val == true) {
                           selectedRoles.add(role);
-                        else
+                        } else {
                           selectedRoles.remove(role);
+                        }
                       });
                     },
                   ),
@@ -249,9 +259,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               onPressed: () async {
                 try {
                   await apiService.updateUserRoles(user.id, selectedRoles);
+                  if (!context.mounted) return;
                   Navigator.pop(context);
+                  if (!mounted) return;
                   setState(() {});
                 } catch (e) {
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(
                     context,
                   ).showSnackBar(SnackBar(content: Text('Błąd: $e')));
@@ -282,9 +295,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             onPressed: () async {
               try {
                 await apiService.deleteUser(user.id);
+                if (!context.mounted) return;
                 Navigator.pop(context);
+                if (!mounted) return;
                 setState(() {});
               } catch (e) {
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(
                   context,
                 ).showSnackBar(SnackBar(content: Text('Błąd: $e')));

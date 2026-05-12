@@ -1,4 +1,4 @@
-package com.example.slavia_mobile
+package com.jakubgawron.cksslavia
 
 import android.content.Intent
 import androidx.core.content.FileProvider

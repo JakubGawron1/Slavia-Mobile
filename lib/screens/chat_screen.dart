@@ -127,10 +127,11 @@ class _ChatScreenState extends State<ChatScreen> {
       await _loadThreads();
       await _loadMessages();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Wysyłka: $e')));
+      }
     }
   }
 
@@ -141,15 +142,17 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       await api.updateChatThreadTitle(id, _titleDraftCtrl.text);
       await _loadThreads();
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Zapisano tytuł')));
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('$e')));
+      }
     }
   }
 
@@ -194,10 +197,11 @@ class _ChatScreenState extends State<ChatScreen> {
         ).showSnackBar(const SnackBar(content: Text('Usunięto wątek')));
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('$e')));
+      }
     }
   }
 
@@ -208,10 +212,11 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       athletes = await api.getAthletesAdmin();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Lista zawodników: $e')));
+      }
       return;
     }
     athletes = athletes

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
@@ -15,6 +16,9 @@ class PushNotificationService {
   Timer? _timer;
   bool _initialized = false;
   ApiService? _apiService;
+
+  /// Udostępnione np. do zaplanowanych przypomnień o startach (#148).
+  FlutterLocalNotificationsPlugin get plugin => _plugin;
 
   static const _channelId = 'slavia_club';
   static const _channelName = 'CKS Slavia';
@@ -78,6 +82,9 @@ class PushNotificationService {
       }
 
       await prefs.setStringList(_prefKey, seen.toList());
+
+      final unread = notifications.where((n) => !n.isRead).length;
+      await AppBadgePlus.updateBadge(unread);
     } catch (_) {
       // Silently fail — network might be unavailable
     }
@@ -119,5 +126,15 @@ class PushNotificationService {
   Future<void> clearSeenIds() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefKey);
+  }
+
+  /// Aktualizacja znaczka ikony (idea #132) — np. po przeczytaniu listy.
+  Future<void> refreshBadgeFromApi() async {
+    if (_apiService == null) return;
+    try {
+      final notifications = await _apiService!.getNotifications();
+      final unread = notifications.where((n) => !n.isRead).length;
+      await AppBadgePlus.updateBadge(unread);
+    } catch (_) {}
   }
 }
