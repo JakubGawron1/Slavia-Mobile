@@ -29,29 +29,34 @@ class GithubLatestRelease {
   });
 }
 
-/// Porównanie wersji z `tag_name` (np. `v1.2.0`) z `PackageInfo.version` (`1.2.0`).
-bool isRemoteVersionNewer(String remoteTag, String currentVersion) {
-  String norm(String s) {
-    var t = s.trim();
-    if (t.startsWith('v') || t.startsWith('V')) t = t.substring(1);
-    final plus = t.split('+').first;
-    return plus;
-  }
+/// Normalizuje tag / `versionName` do rdzenia semver (bez `v`, bez `+build`, bez sufiksu `-pre`).
+String _semverCore(String s) {
+  var t = s.trim();
+  if (t.startsWith('v') || t.startsWith('V')) t = t.substring(1);
+  t = t.split('+').first.trim();
+  t = t.split('-').first.trim();
+  return t;
+}
 
+/// Porównanie wersji z `tag_name` (np. `v1.2.10`) z `PackageInfo.version` (`1.2.3`).
+bool isRemoteVersionNewer(String remoteTag, String currentVersion) {
   List<int> parts(String v) {
-    final segs = norm(v).split('.');
-    return [
-      int.tryParse(segs.elementAt(0)) ?? 0,
-      int.tryParse(segs.length > 1 ? segs[1] : '0') ?? 0,
-      int.tryParse(segs.length > 2 ? segs[2] : '0') ?? 0,
-    ];
+    final core = _semverCore(v);
+    if (core.isEmpty) return <int>[0];
+    return core
+        .split('.')
+        .map((seg) => int.tryParse(seg.trim()) ?? 0)
+        .toList();
   }
 
   final a = parts(remoteTag);
   final b = parts(currentVersion);
-  for (var i = 0; i < 3; i++) {
-    if (a[i] > b[i]) return true;
-    if (a[i] < b[i]) return false;
+  final len = a.length > b.length ? a.length : b.length;
+  for (var i = 0; i < len; i++) {
+    final ai = i < a.length ? a[i] : 0;
+    final bi = i < b.length ? b[i] : 0;
+    if (ai > bi) return true;
+    if (ai < bi) return false;
   }
   return false;
 }
@@ -60,14 +65,16 @@ Future<GithubLatestRelease?> fetchLatestGithubRelease() async {
   final r = MobileGithubRelease.repo.trim();
   if (!MobileGithubRelease.isConfigured) return null;
   final uri = Uri.parse('https://api.github.com/repos/$r/releases/latest');
-  final res = await http.get(
-    uri,
-    headers: const {
-      'Accept': 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'Slavia-Mobile-UpdateCheck',
-    },
-  );
+  final res = await http
+      .get(
+        uri,
+        headers: const {
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'User-Agent': 'Slavia-Mobile-UpdateCheck',
+        },
+      )
+      .timeout(const Duration(seconds: 20));
   if (res.statusCode != 200) return null;
   final map = jsonDecode(res.body) as Map<String, dynamic>;
   final assets = (map['assets'] as List<dynamic>?) ?? [];
@@ -97,25 +104,57 @@ class AppUpdateService {
 
   bool _checking = false;
 
-  Future<void> checkAndOfferUpdate(
+  /// Automatyczne sprawdzenie przy starcie: [ignoreDismissed] = false.
+  /// Z profilu: [ignoreDismissed] = true — pokaż też SnackBar, gdy nie wyświetlono dialogu.
+  ///
+  /// Zwraca tekst do SnackBara (np. „Masz aktualną wersję”), albo `null` gdy pokazano dialog lub pominięto cicho.
+  Future<String?> checkAndOfferUpdate(
     BuildContext context, {
     bool ignoreDismissed = false,
   }) async {
-    if (_checking || !MobileGithubRelease.isConfigured) return;
+    if (!MobileGithubRelease.isConfigured) {
+      return ignoreDismissed
+          ? 'Brak SLAVIA_MOBILE_GITHUB_REPO — nie skonfigurowano repozytorium wydań.'
+          : null;
+    }
+    if (_checking) {
+      return ignoreDismissed ? 'Sprawdzanie wersji już trwa…' : null;
+    }
     _checking = true;
     try {
       final info = await PackageInfo.fromPlatform();
-      final rel = await fetchLatestGithubRelease();
-      if (rel == null || rel.tagName.isEmpty) return;
-      if (!isRemoteVersionNewer(rel.tagName, info.version)) return;
+      GithubLatestRelease? rel;
+      try {
+        rel = await fetchLatestGithubRelease();
+      } catch (_) {
+        if (ignoreDismissed) {
+          return 'Nie udało się połączyć z GitHub (sieć, timeout lub limit API). Spróbuj za chwilę.';
+        }
+        return null;
+      }
+      if (rel == null || rel.tagName.isEmpty) {
+        if (ignoreDismissed) {
+          return 'Brak danych o wydaniu (GitHub zwrócił błąd lub pustą odpowiedź).';
+        }
+        return null;
+      }
+
+      if (!isRemoteVersionNewer(rel.tagName, info.version)) {
+        if (ignoreDismissed) {
+          return 'Masz aktualną wersję: ${info.version} (build ${info.buildNumber}). '
+              'Ostatnie wydanie na GitHubie: ${rel.tagName}.';
+        }
+        return null;
+      }
 
       final prefs = await SharedPreferences.getInstance();
       if (!ignoreDismissed) {
         final dismissed = prefs.getString(_kDismissedTagKey);
-        if (dismissed == rel.tagName) return;
+        if (dismissed == rel.tagName) return null;
       }
 
-      if (!context.mounted) return;
+      if (!context.mounted) return null;
+      final GithubLatestRelease release = rel;
       await showDialog<void>(
         context: context,
         barrierDismissible: false,
@@ -135,17 +174,20 @@ class AppUpdateService {
                   'Zainstalowana: ${info.version} (build ${info.buildNumber})',
                 ),
                 const SizedBox(height: 8),
-                Text('Wydanie na GitHubie: ${rel.tagName}'),
-                if (rel.name.isNotEmpty) ...[
+                Text('Wydanie na GitHubie: ${release.tagName}'),
+                if (release.name.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
-                    rel.name,
+                    release.name,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ],
-                if (rel.body != null && rel.body!.trim().isNotEmpty) ...[
+                if (release.body != null && release.body!.trim().isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  Text(rel.body!.trim(), style: const TextStyle(fontSize: 13)),
+                  Text(
+                    release.body!.trim(),
+                    style: const TextStyle(fontSize: 13),
+                  ),
                 ],
                 if (Platform.isIOS) ...[
                   const SizedBox(height: 12),
@@ -160,28 +202,28 @@ class AppUpdateService {
           actions: [
             TextButton(
               onPressed: () async {
-                await prefs.setString(_kDismissedTagKey, rel.tagName);
+                await prefs.setString(_kDismissedTagKey, release.tagName);
                 if (ctx.mounted) Navigator.pop(ctx);
               },
               child: const Text('Później'),
             ),
             TextButton(
               onPressed: () async {
-                final u = Uri.tryParse(rel.htmlUrl);
+                final u = Uri.tryParse(release.htmlUrl);
                 if (u != null) {
                   await launchUrl(u, mode: LaunchMode.externalApplication);
                 }
               },
               child: const Text('Strona wydania'),
             ),
-            if (Platform.isAndroid && rel.apkUrl != null)
+            if (Platform.isAndroid && release.apkUrl != null)
               FilledButton(
                 onPressed: () async {
                   Navigator.pop(ctx);
                   await _downloadAndInstallApk(
                     context,
-                    rel.apkUrl!,
-                    rel.tagName,
+                    release.apkUrl!,
+                    release.tagName,
                   );
                 },
                 child: const Text('Pobierz i zainstaluj'),
@@ -189,8 +231,12 @@ class AppUpdateService {
           ],
         ),
       );
+      return null;
     } catch (_) {
-      // sieć / parsowanie — ignoruj cicho
+      if (ignoreDismissed) {
+        return 'Wystąpił nieoczekiwany błąd podczas sprawdzania aktualizacji.';
+      }
+      return null;
     } finally {
       _checking = false;
     }
@@ -204,11 +250,13 @@ class AppUpdateService {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Pobieranie aktualizacji…'),
-        duration: Duration(seconds: 30),
+        duration: Duration(seconds: 45),
       ),
     );
     try {
-      final res = await http.get(Uri.parse(apkUrl));
+      final res = await http
+          .get(Uri.parse(apkUrl))
+          .timeout(const Duration(minutes: 5));
       if (res.statusCode != 200) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).hideCurrentSnackBar();

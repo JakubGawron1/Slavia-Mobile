@@ -14,6 +14,8 @@ import 'competition_assignment_screen.dart';
 import 'proportions_calculator_page.dart';
 import 'sinclair_calculator_page.dart';
 import '../ui/slavia_ui.dart';
+import 'athlete_training_plans_screen.dart';
+import 'trainer_training_plans_screen.dart';
 import 'training_log_screen.dart';
 
 String _primaryRoleLabel(List<String> roles) {
@@ -467,6 +469,15 @@ class _QuickAccessRow extends StatelessWidget {
       tiles.add(
         _quickTile(
           context,
+          'Plany',
+          Icons.fitness_center_rounded,
+          Colors.deepOrange,
+          () => push(const AthleteTrainingPlansScreen()),
+        ),
+      );
+      tiles.add(
+        _quickTile(
+          context,
           'Panel',
           Icons.bar_chart_rounded,
           Colors.purple,
@@ -474,6 +485,8 @@ class _QuickAccessRow extends StatelessWidget {
         ),
       );
     }
+    final canTrainerPlans =
+        roles.contains('Trainer') || roles.contains('SuperAdmin');
     if (isStaff) {
       tiles.add(
         _quickTile(
@@ -482,6 +495,17 @@ class _QuickAccessRow extends StatelessWidget {
           Icons.assignment_ind_rounded,
           Colors.cyan,
           () => push(const CompetitionAssignmentScreen()),
+        ),
+      );
+    }
+    if (canTrainerPlans) {
+      tiles.add(
+        _quickTile(
+          context,
+          'Trener — plany',
+          Icons.edit_calendar_rounded,
+          Colors.orange,
+          () => push(const TrainerTrainingPlansScreen()),
         ),
       );
     }

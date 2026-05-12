@@ -9,7 +9,8 @@ plugins {
 val repoRoot: java.io.File = rootProject.projectDir.parentFile!!
 
 /**
- * Wersja **versionName**: najwyższy tag semver w Git (`git tag --sort=-version:refname`).
+ * Wersja **versionName**: tag na `HEAD` (`git describe --tags --exact-match`),
+ * inaczej najwyższy tag `v*` (`git tag -l "v*" --sort=-version:refname`), na końcu `pubspec.yaml`.
  * **versionCode**: `git rev-list --count HEAD` (monotoniczny przyrost przy każdym commicie).
  * Przed buildem warto `git fetch --tags`, żeby lokalnie mieć te same tagi co GitHub.
  * Gdy Git niedostępny — wartości z `pubspec.yaml` (Flutter).
@@ -30,9 +31,17 @@ fun gitStdout(vararg args: String): String? {
     }
 }
 
+/** Tag dokładnie na `HEAD` (np. build z `git checkout v0.8.0` lub tag na commicie main). */
+fun gitDescribeExactTagAtHead(): String? {
+    val raw =
+        gitStdout("describe", "--tags", "--exact-match", "HEAD") ?: return null
+    return raw.removePrefix("v").removePrefix("V").trim().takeIf { it.isNotEmpty() }
+}
+
+/** Najwyższy tag `v*` (sortowanie wersji Git), gdy HEAD nie jest na tagu. */
 fun gitLatestTagAsVersionName(): String? {
     val raw =
-        gitStdout("tag", "-l", "--sort=-version:refname") ?: return null
+        gitStdout("tag", "-l", "v*", "--sort=-version:refname") ?: return null
     val first =
         raw.lineSequence().firstOrNull { it.isNotBlank() }?.trim() ?: return null
     return first.removePrefix("v").removePrefix("V").trim().takeIf { it.isNotEmpty() }
@@ -60,7 +69,7 @@ android {
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
 
-        val tagVer = gitLatestTagAsVersionName()
+        val tagVer = gitDescribeExactTagAtHead() ?: gitLatestTagAsVersionName()
         val commits = gitRevCount()
         versionName = tagVer ?: flutter.versionName
         versionCode = commits ?: flutter.versionCode

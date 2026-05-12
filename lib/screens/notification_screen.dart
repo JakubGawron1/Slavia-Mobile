@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../models/notification.dart';
 import '../services/api_service.dart';
+import '../services/push_notification_service.dart';
 import '../ui/slavia_ui.dart';
 import '../utils/network_feedback.dart';
 
@@ -28,6 +31,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
     if (_didInitDeps) return;
     _didInitDeps = true;
     _fetch();
+  }
+
+  Future<void> _syncBadgeAndSeen() async {
+    await PushNotificationService().refreshBadgeFromApi();
   }
 
   Future<void> _fetch() async {
@@ -61,7 +68,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final api = Provider.of<ApiService>(context, listen: false);
     try {
       await api.markNotificationRead(n.id);
-      if (mounted) await _fetch();
+      if (mounted) {
+        await _fetch();
+        unawaited(_syncBadgeAndSeen());
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -82,6 +92,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       if (mounted) {
         HapticFeedback.lightImpact();
         await _fetch();
+        unawaited(_syncBadgeAndSeen());
       }
     } catch (e) {
       if (!mounted) return;
@@ -100,9 +111,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final api = Provider.of<ApiService>(context, listen: false);
     try {
       await api.deleteNotification(n.id);
+      if (n.id.isNotEmpty) {
+        await PushNotificationService().forgetNotificationIds([n.id]);
+      }
       if (mounted) {
         setState(() => _items.removeWhere((x) => x.id == n.id));
         HapticFeedback.mediumImpact();
+        unawaited(_syncBadgeAndSeen());
       }
     } catch (e) {
       if (!mounted) return;
@@ -121,6 +136,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final api = Provider.of<ApiService>(context, listen: false);
     try {
       await api.deleteNotification(n.id);
+      if (n.id.isNotEmpty) {
+        await PushNotificationService().forgetNotificationIds([n.id]);
+      }
+      unawaited(_syncBadgeAndSeen());
       return true;
     } catch (e) {
       if (mounted) {
@@ -194,11 +213,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
     if (ok != true || !mounted) return;
     final api = Provider.of<ApiService>(context, listen: false);
+    final ids = _items.map((e) => e.id).where((id) => id.isNotEmpty).toList();
     try {
       await api.deleteAllNotifications();
+      if (ids.isNotEmpty) {
+        await PushNotificationService().forgetNotificationIds(ids);
+      }
       if (mounted) {
         HapticFeedback.mediumImpact();
         await _fetch();
+        unawaited(_syncBadgeAndSeen());
       }
     } catch (e) {
       if (!mounted) return;
@@ -213,7 +237,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  Widget _buildNotificationTile(ClubNotification n, ColorScheme cs) {
+  Widget _buildNotificationTile(
+    ClubNotification n,
+    ColorScheme cs,
+    int index,
+  ) {
     final unread = !n.isRead;
     final card = Material(
       color: cs.surface,
@@ -317,7 +345,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
 
     return Dismissible(
-      key: ValueKey(n.id),
+      key: ValueKey('notif-${n.id}-$index'),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
@@ -337,6 +365,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         if (!mounted) return;
         setState(() => _items.removeWhere((x) => x.id == n.id));
         HapticFeedback.mediumImpact();
+        unawaited(_syncBadgeAndSeen());
       },
       child: card,
     );
@@ -446,7 +475,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final n = _items[index];
-                          return _buildNotificationTile(n, cs);
+                          return _buildNotificationTile(n, cs, index);
                         },
                       ),
                     ),

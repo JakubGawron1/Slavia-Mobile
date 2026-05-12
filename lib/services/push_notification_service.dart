@@ -128,6 +128,16 @@ class PushNotificationService {
     await prefs.remove(_prefKey);
   }
 
+  /// Po usunięciu powiadomienia usuń ID z cache — inaczej lista „seen” rośnie bez końca.
+  Future<void> forgetNotificationIds(Iterable<String> ids) async {
+    final prefs = await SharedPreferences.getInstance();
+    final seen = Set<String>.from(prefs.getStringList(_prefKey) ?? []);
+    for (final id in ids) {
+      seen.remove(id);
+    }
+    await prefs.setStringList(_prefKey, seen.toList());
+  }
+
   /// Aktualizacja znaczka ikony (idea #132) — np. po przeczytaniu listy.
   Future<void> refreshBadgeFromApi() async {
     if (_apiService == null) return;

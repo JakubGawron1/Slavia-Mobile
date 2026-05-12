@@ -423,10 +423,17 @@ class _ProfilePageState extends State<ProfilePage> {
                     );
                     return;
                   }
-                  await AppUpdateService.instance.checkAndOfferUpdate(
+                  final msg =
+                      await AppUpdateService.instance.checkAndOfferUpdate(
                     context,
                     ignoreDismissed: true,
                   );
+                  if (!context.mounted) return;
+                  if (msg != null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(msg)),
+                    );
+                  }
                 },
               ),
             ]),

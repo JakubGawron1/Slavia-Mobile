@@ -10,6 +10,8 @@ import '../models/competition.dart';
 import '../models/announcement.dart';
 import '../models/chat.dart';
 import '../models/athlete_timeline_item.dart';
+import '../models/training_plan.dart';
+import '../models/exercise.dart';
 import '../config/api_base.dart';
 
 class ApiService {
@@ -715,6 +717,242 @@ class ApiService {
           .toList();
     }
     throw Exception('Failed to load athlete timeline');
+  }
+
+  /// Plany przypisane do zalogowanego profilu zawodnika (`GET /api/training-plans/my`).
+  Future<List<TrainingPlan>> getMyTrainingPlans() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/training-plans/my'),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data
+          .map((e) => TrainingPlan.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    if (response.statusCode == 404) {
+      return [];
+    }
+    throw Exception('Failed to load training plans: ${response.statusCode}');
+  }
+
+  Future<List<TrainingPlanItem>> getTrainingPlanItems(String planId) async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse(
+        '$baseUrl/api/training-plans/${Uri.encodeComponent(planId)}/items',
+      ),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data
+          .map((e) => TrainingPlanItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to load plan items: ${response.statusCode}');
+  }
+
+  Future<void> patchMyTrainingPlanProgress(
+    String planId, {
+    required String status,
+    required int progressPercent,
+    required String athleteNote,
+  }) async {
+    final token = await getToken();
+    final response = await http.patch(
+      Uri.parse(
+        '$baseUrl/api/training-plans/${Uri.encodeComponent(planId)}/my-progress',
+      ),
+      headers: _headers(token),
+      body: jsonEncode({
+        'status': status,
+        'progress_percent': progressPercent.clamp(0, 100),
+        'athlete_note': athleteNote,
+      }),
+    );
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to save progress: ${response.statusCode} ${response.body}',
+      );
+    }
+  }
+
+  /// Kadra: plany wybranego zawodnika (`GET /api/training-plans/athlete/{id}`).
+  Future<List<TrainingPlan>> getTrainingPlansForAthlete(String athleteId) async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse(
+        '$baseUrl/api/training-plans/athlete/${Uri.encodeComponent(athleteId)}',
+      ),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data
+          .map((e) => TrainingPlan.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception(
+      'Failed to load athlete plans: ${response.statusCode} ${response.body}',
+    );
+  }
+
+  Future<TrainingPlan> createTrainingPlan({
+    required String athleteId,
+    required String title,
+    String? goal,
+    required String weekStart,
+    String? status,
+    String? coachNote,
+  }) async {
+    final token = await getToken();
+    final body = <String, dynamic>{
+      'athlete_id': athleteId,
+      'title': title.trim(),
+      'week_start': weekStart.trim(),
+    };
+    if (goal != null && goal.trim().isNotEmpty) {
+      body['goal'] = goal.trim();
+    }
+    if (status != null && status.trim().isNotEmpty) {
+      body['status'] = status.trim();
+    }
+    if (coachNote != null && coachNote.trim().isNotEmpty) {
+      body['coach_note'] = coachNote.trim();
+    }
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/training-plans'),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return TrainingPlan.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+    throw Exception(
+      'Failed to create plan: ${response.statusCode} ${response.body}',
+    );
+  }
+
+  Future<void> updateTrainingPlan(
+    String planId, {
+    required String title,
+    String? goal,
+    required String weekStart,
+    required String status,
+    String? coachNote,
+  }) async {
+    final token = await getToken();
+    final response = await http.patch(
+      Uri.parse(
+        '$baseUrl/api/training-plans/${Uri.encodeComponent(planId)}',
+      ),
+      headers: _headers(token),
+      body: jsonEncode({
+        'title': title.trim(),
+        'week_start': weekStart.trim(),
+        'status': status,
+        'goal': (goal == null || goal.trim().isEmpty) ? null : goal.trim(),
+        'coach_note': (coachNote == null || coachNote.trim().isEmpty)
+            ? null
+            : coachNote.trim(),
+      }),
+    );
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to update plan: ${response.statusCode} ${response.body}',
+      );
+    }
+  }
+
+  Future<void> deleteTrainingPlan(String planId) async {
+    final token = await getToken();
+    final response = await http.delete(
+      Uri.parse(
+        '$baseUrl/api/training-plans/${Uri.encodeComponent(planId)}',
+      ),
+      headers: _headers(token),
+    );
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw Exception(
+        'Failed to delete plan: ${response.statusCode} ${response.body}',
+      );
+    }
+  }
+
+  Future<void> putTrainingPlanItems(
+    String planId,
+    List<PlanItemPutPayload> items,
+  ) async {
+    final token = await getToken();
+    final response = await http.put(
+      Uri.parse(
+        '$baseUrl/api/training-plans/${Uri.encodeComponent(planId)}/items',
+      ),
+      headers: _headers(token),
+      body: jsonEncode({
+        'items': items.map((e) => e.toJson()).toList(),
+      }),
+    );
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to save plan items: ${response.statusCode} ${response.body}',
+      );
+    }
+  }
+
+  Future<List<Exercise>> getExercises() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/exercises'),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data
+          .map((e) => Exercise.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception(
+      'Failed to load exercises: ${response.statusCode} ${response.body}',
+    );
+  }
+
+  /// Kopia planu z jednostkami (jak `duplicatePlan` na `/trainer/plany`).
+  Future<TrainingPlan> duplicateTrainingPlan({
+    required TrainingPlan source,
+    required String athleteId,
+  }) async {
+    final items = await getTrainingPlanItems(source.id);
+    final created = await createTrainingPlan(
+      athleteId: athleteId,
+      title: '${source.title} (kopia)',
+      goal: source.goal,
+      weekStart: source.weekStart,
+      status: source.status,
+      coachNote: source.coachNote,
+    );
+    final payloads = items
+        .map(
+          (i) => PlanItemPutPayload(
+            dayOfWeek: i.dayOfWeek,
+            exerciseId: i.exerciseId,
+            customExerciseName: i.customExerciseName ?? '',
+            sets: i.sets,
+            reps: i.reps,
+            intensityPercent: i.intensityPercent,
+            weightKg: i.weightKg,
+            notes: i.notes ?? '',
+            sortOrder: i.sortOrder,
+          ),
+        )
+        .toList();
+    await putTrainingPlanItems(created.id, payloads);
+    return created;
   }
 }
 

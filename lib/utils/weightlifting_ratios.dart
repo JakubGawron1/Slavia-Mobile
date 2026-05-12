@@ -517,7 +517,7 @@ abstract final class WeightliftingRatios {
     return out;
   }
 
-  /// Kolejność pól jak na stronie WWW (`ALL_KEYS`).
+  /// Kolejność pól jak na WWW (`kalkulator-proporcji.vue` → `ALL_KEYS`).
   static const List<ExerciseId> allInputKeys = [
     ExerciseId.snatch,
     ExerciseId.cleanJerk,

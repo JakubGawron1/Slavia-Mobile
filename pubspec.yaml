@@ -17,9 +17,9 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
 #
-# Android: `android/app/build.gradle.kts` nadpisuje versionName (najwyższy tag Git)
-# oraz versionCode (liczba commitów). Tu — wartości zapasowe gdy Git niedostępny.
-version: 1.0.0+1
+# Android: `android/app/build.gradle.kts` — versionName z tagu Git (exact / najnowszy v*), versionCode z `git rev-list --count`.
+# iOS / PackageInfo: domyślnie ta sama linia `version` (fallback gdy Gradle nie buduje).
+version: 0.8.0+1
 
 environment:
   sdk: ^3.9.2

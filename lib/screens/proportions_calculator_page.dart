@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../ui/slavia_ui.dart';
+import '../utils/parse_live_number.dart';
 import '../utils/weightlifting_ratios.dart';
 
 /// Kalkulator „złotych proporcji” — funkcjonalnie jak `/kalkulator-proporcji` na WWW.
@@ -38,12 +39,16 @@ class _ProportionsCalculatorPageState extends State<ProportionsCalculatorPage> {
   Map<ExerciseId, double?> _parseInputs() {
     final out = <ExerciseId, double?>{};
     for (final e in _controllers.entries) {
-      final t = e.value.text.replaceAll(',', '.').trim();
-      if (t.isEmpty) {
+      final parsed = parseLiveNumber(e.value.text);
+      if (parsed == null) {
         out[e.key] = null;
         continue;
       }
-      out[e.key] = double.tryParse(t);
+      if (parsed > 0) {
+        out[e.key] = parsed;
+      } else {
+        out[e.key] = null;
+      }
     }
     return out;
   }
@@ -158,7 +163,7 @@ class _ProportionsCalculatorPageState extends State<ProportionsCalculatorPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Wpisz znane maxy (1RM). Zobaczysz sugerowane zakresy oraz feedback, gdy podasz oba boje w relacji.',
+                          'Wpisz znane maxy (1RM). Dostaniesz sugerowane widełki oraz wskazówki, gdy podasz oba boje w relacji — tak samo jak w kalkulatorze na stronie klubu.',
                           style: GoogleFonts.outfit(
                             fontSize: 14,
                             height: 1.45,
@@ -395,8 +400,7 @@ class _ProportionsCalculatorPageState extends State<ProportionsCalculatorPage> {
   Widget _resultCard(RatioResult r) {
     final cs = Theme.of(context).colorScheme;
     final accent = _statusColor(r.status);
-    final pctLabel =
-        '${(r.ratio.min * 100).round()}–${(r.ratio.max * 100).round()}%';
+    final pctLabel = _fmtPctRange(r.ratio);
 
     return Material(
       color: cs.surface,
@@ -485,7 +489,7 @@ class _ProportionsCalculatorPageState extends State<ProportionsCalculatorPage> {
               const SizedBox(height: 10),
               if (r.minKg != null && r.maxKg != null)
                 Text(
-                  'Sugerowane: ${r.minKg!.toStringAsFixed(1)}–${r.maxKg!.toStringAsFixed(1)} kg · Ratio $pctLabel',
+                  'Sugerowane: ${_fmtKgRange(r.minKg, r.maxKg)} · Ratio $pctLabel',
                   style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
                 )
               else
@@ -532,6 +536,22 @@ class _ProportionsCalculatorPageState extends State<ProportionsCalculatorPage> {
         ),
       ),
     );
+  }
+
+  /// Jak `fmtPct` na WWW — gdy min==max po zaokrągleniu, jedna liczba procentowa.
+  String _fmtPctRange(RatioRange r) {
+    final a = (r.min * 100).round();
+    final b = (r.max * 100).round();
+    final lo = a <= b ? a : b;
+    final hi = a <= b ? b : a;
+    return lo == hi ? '$lo%' : '$lo–$hi%';
+  }
+
+  String? _fmtKgRange(double? minKg, double? maxKg) {
+    if (minKg == null || maxKg == null) return null;
+    final lo = minKg <= maxKg ? minKg : maxKg;
+    final hi = minKg <= maxKg ? maxKg : minKg;
+    return '${lo.toStringAsFixed(1)}–${hi.toStringAsFixed(1)} kg';
   }
 
   Color _statusColor(String status) {

@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../main.dart';
 import 'sinclair_calculator_page.dart';
 import 'proportions_calculator_page.dart';
+import 'athlete_training_plans_screen.dart';
+import 'trainer_training_plans_screen.dart';
 import 'training_log_screen.dart';
 import 'audit_log_screen.dart';
 import 'user_management_screen.dart';
@@ -23,6 +25,8 @@ class CalculatorsPage extends StatelessWidget {
     final canStaffStarts = roles.contains('Trainer') ||
         roles.contains('Admin') ||
         roles.contains('SuperAdmin');
+    final canTrainerPlans =
+        roles.contains('Trainer') || roles.contains('SuperAdmin');
     final isClubAdmin =
         roles.contains('Admin') || roles.contains('SuperAdmin');
 
@@ -82,6 +86,14 @@ class CalculatorsPage extends StatelessWidget {
               Colors.teal,
               const TrainingLogScreen(),
             ),
+            _toolCard(
+              context,
+              'Plany treningowe',
+              'Cykle od trenera, postęp i jednostki dnia.',
+              Icons.fitness_center_rounded,
+              Colors.deepOrange,
+              const AthleteTrainingPlansScreen(),
+            ),
           ],
 
           // Calculators section
@@ -117,6 +129,15 @@ class CalculatorsPage extends StatelessWidget {
               Colors.cyan,
               const CompetitionAssignmentScreen(),
             ),
+            if (canTrainerPlans)
+              _toolCard(
+                context,
+                'Plany treningowe (trener)',
+                'Cykle i jednostki zawodników — jak w panelu trenera na WWW.',
+                Icons.edit_calendar_rounded,
+                Colors.deepOrange,
+                const TrainerTrainingPlansScreen(),
+              ),
           ],
 
           // Administracja klubu — API wymaga Admin lub SuperAdmin

@@ -19,13 +19,14 @@ class ClubNotification {
 
   factory ClubNotification.fromJson(Map<String, dynamic> json) {
     return ClubNotification(
-      id: json['id'],
-      kind: json['kind'],
-      title: json['title'],
-      body: json['body'],
-      payload: json['payload'],
-      createdAt: DateTime.parse(json['created_at']),
-      isRead: json['is_read'] ?? false,
+      id: json['id']?.toString() ?? '',
+      kind: json['kind']?.toString() ?? 'info',
+      title: json['title']?.toString() ?? '',
+      body: json['body']?.toString() ?? '',
+      payload: json['payload']?.toString(),
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      isRead: json['is_read'] == true || json['is_read'] == 1,
     );
   }
 }
