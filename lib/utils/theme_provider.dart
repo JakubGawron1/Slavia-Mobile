@@ -80,19 +80,26 @@ class ThemeProvider with ChangeNotifier {
         ThemeProvider.parsePreset(_prefs.getString(_kPreset)) ??
             SlaviaPreset.slavia;
     _themeMode = ThemeProvider._parseMode(_prefs.getString(_kMode));
+    _outdoorCompetitionContrast =
+        _prefs.getBool(_kOutdoorHc) ?? false;
   }
 
   static const _kPreset = 'slavia_mobile_ui_theme_preset';
   static const _kMode = 'slavia_mobile_ui_color_mode';
+  static const _kOutdoorHc = 'slavia_mobile_outdoor_high_contrast';
 
   final SharedPreferences _prefs;
   ApiService? _api;
 
   SlaviaPreset _preset = SlaviaPreset.slavia;
   ThemeMode _themeMode = ThemeMode.dark;
+  bool _outdoorCompetitionContrast = false;
 
   SlaviaPreset get preset => _preset;
   ThemeMode get themeMode => _themeMode;
+
+  /// Pomost / ostre światło (#69).
+  bool get outdoorCompetitionContrast => _outdoorCompetitionContrast;
 
   /// Wywołaj po utworzeniu [ApiService], żeby przy zmianie motywu zapisywać na koncie (jak WWW).
   void attachApi(ApiService api) => _api = api;
@@ -144,6 +151,13 @@ class ThemeProvider with ChangeNotifier {
     await _pushRemoteBestEffort();
   }
 
+  Future<void> setOutdoorCompetitionContrast(bool value) async {
+    if (_outdoorCompetitionContrast == value) return;
+    _outdoorCompetitionContrast = value;
+    await _prefs.setBool(_kOutdoorHc, value);
+    notifyListeners();
+  }
+
   Future<void> _persistLocal() async {
     await _prefs.setString(_kPreset, presetToStorage(_preset));
     await _prefs.setString(_kMode, modeToStorage(_themeMode));
@@ -163,7 +177,10 @@ class ThemeProvider with ChangeNotifier {
   }
 
   ThemeData getTheme(bool isDark) {
-    final colors = _getPresetColors(_preset, isDark);
+    final useOutdoor = _outdoorCompetitionContrast && isDark;
+    final colors = useOutdoor
+        ? _outdoorCompetitionColors()
+        : _getPresetColors(_preset, isDark);
     final baseTheme = isDark ? ThemeData.dark() : ThemeData.light();
 
     final baseScheme = ColorScheme.fromSeed(
@@ -175,7 +192,9 @@ class ThemeProvider with ChangeNotifier {
       brightness: isDark ? Brightness.dark : Brightness.light,
     );
 
-    final outline = colors.onSurface.withValues(alpha: isDark ? 0.14 : 0.08);
+    final outline = colors.onSurface.withValues(
+      alpha: useOutdoor ? 0.32 : (isDark ? 0.14 : 0.08),
+    );
 
     return ThemeData(
       useMaterial3: true,
@@ -248,6 +267,17 @@ class ThemeProvider with ChangeNotifier {
 
   /// Kropka podglądu na liście presetów (ten sam akcent co w ciemnym wariancie).
   Color previewAccent(SlaviaPreset p) => _getPresetColors(p, true).primary;
+
+  _PresetColors _outdoorCompetitionColors() {
+    return _PresetColors(
+      primary: const Color(0xFFFFEA00),
+      secondary: Colors.white,
+      background: Colors.black,
+      surface: const Color(0xFF050505),
+      card: const Color(0xFF121212),
+      onSurface: Colors.white,
+    );
+  }
 
   _PresetColors _getPresetColors(SlaviaPreset preset, bool isDark) {
     switch (preset) {

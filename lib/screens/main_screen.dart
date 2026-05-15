@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../main.dart';
+import '../models/competition.dart';
+import '../services/api_service.dart';
 import '../services/app_shortcuts_service.dart';
 import '../services/app_update_service.dart';
 import '../services/push_notification_service.dart';
@@ -33,6 +36,8 @@ class _MainScreenState extends State<MainScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       await AppShortcutsService.instance.ensureInitialized();
+      if (!mounted) return;
+      unawaited(_syncAthleteShortcutCalendarHint());
       final pending = AppShortcutsBridge.takePending();
       if (!mounted) return;
       if (pending == 'shortcut_chat') {
@@ -61,6 +66,59 @@ class _MainScreenState extends State<MainScreen> {
       if (!mounted) return;
       AppUpdateService.instance.checkAndOfferUpdate(context);
     });
+  }
+
+  Future<void> _syncAthleteShortcutCalendarHint() async {
+    if (!mounted) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final api = Provider.of<ApiService>(context, listen: false);
+    final roles = auth.user?.roles ?? [];
+    if (!roles.contains('Athlete')) {
+      await AppShortcutsService.instance.updateCalendarShortcutSubtitle(null);
+      return;
+    }
+    try {
+      final items = await api.getMyCalendarCompetitions();
+      if (!mounted) return;
+      if (items.isEmpty) {
+        await AppShortcutsService.instance.updateCalendarShortcutSubtitle(
+          'Brak przypisanych startów',
+        );
+        return;
+      }
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      Competition? upcoming;
+      for (final c in items) {
+        final day = DateTime(c.date.year, c.date.month, c.date.day);
+        if (!day.isBefore(today)) {
+          if (upcoming == null || c.date.isBefore(upcoming.date)) {
+            upcoming = c;
+          }
+        }
+      }
+      final sorted = List<Competition>.from(items)
+        ..sort((a, b) => a.date.compareTo(b.date));
+      final chosen = upcoming ?? sorted.last;
+      final prefix = upcoming == null ? 'Ostatni: ' : '';
+      var line =
+          '$prefix${DateFormat('d MMM', 'pl_PL').format(chosen.date)} · ${chosen.title}';
+      if (line.length > 48) {
+        line = '${line.substring(0, 45)}…';
+      }
+      final loc = chosen.location.trim();
+      if (loc.isNotEmpty) {
+        final short =
+            loc.length > 16 ? '${loc.substring(0, 13)}…' : loc;
+        line = '$line · $short';
+        if (line.length > 52) {
+          line = '${line.substring(0, 49)}…';
+        }
+      }
+      await AppShortcutsService.instance.updateCalendarShortcutSubtitle(line);
+    } catch (_) {
+      await AppShortcutsService.instance.updateCalendarShortcutSubtitle(null);
+    }
   }
 
   @override

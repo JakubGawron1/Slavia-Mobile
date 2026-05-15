@@ -6,7 +6,7 @@ const _kChat = 'shortcut_chat';
 const _kTraining = 'shortcut_training';
 const _kCalendar = 'shortcut_calendar';
 
-/// Skróty na ekranie głównym (Android / iOS) — idea #112.
+/// Skróty na ekranie głównym (Android / iOS) — idea #112 (oraz #111 — podtytuł „Moje starty”).
 class AppShortcutsService {
   AppShortcutsService._();
   static final AppShortcutsService instance = AppShortcutsService._();
@@ -14,13 +14,8 @@ class AppShortcutsService {
   final QuickActions _qa = QuickActions();
   bool _ready = false;
 
-  Future<void> ensureInitialized() async {
-    if (_ready) return;
-    _ready = true;
-    await _qa.initialize((type) {
-      AppShortcutsBridge.pendingType = type;
-    });
-    await _qa.setShortcutItems(<ShortcutItem>[
+  List<ShortcutItem> _buildItems({required String calendarSubtitle}) {
+    return <ShortcutItem>[
       const ShortcutItem(
         type: _kChat,
         localizedTitle: 'Czat z trenerem',
@@ -31,11 +26,34 @@ class AppShortcutsService {
         localizedTitle: 'Dziennik treningów',
         localizedSubtitle: 'CKS Slavia',
       ),
-      const ShortcutItem(
+      ShortcutItem(
         type: _kCalendar,
         localizedTitle: 'Moje starty',
-        localizedSubtitle: 'Kalendarz zawodów',
+        localizedSubtitle: calendarSubtitle,
       ),
-    ]);
+    ];
+  }
+
+  Future<void> ensureInitialized() async {
+    if (_ready) return;
+    _ready = true;
+    await _qa.initialize((type) {
+      AppShortcutsBridge.pendingType = type;
+    });
+    await _qa.setShortcutItems(
+      _buildItems(calendarSubtitle: 'Kalendarz zawodów'),
+    );
+  }
+
+  /// Ustawia drugi wiersz skrótu „Moje starty” (treść z najbliższego wpisu — idea #111).
+  Future<void> updateCalendarShortcutSubtitle(String? subtitle) async {
+    if (!_ready) {
+      await ensureInitialized();
+    }
+    final sub =
+        subtitle == null || subtitle.trim().isEmpty
+            ? 'Kalendarz zawodów'
+            : subtitle.trim();
+    await _qa.setShortcutItems(_buildItems(calendarSubtitle: sub));
   }
 }

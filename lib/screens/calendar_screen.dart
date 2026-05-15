@@ -1,12 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../main.dart';
 import '../models/competition.dart';
 import '../services/api_service.dart';
 import '../services/competition_reminder_service.dart';
 import '../utils/network_feedback.dart';
+import '../utils/last_error_recorder.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
@@ -91,6 +96,32 @@ class _CalendarScreenState extends State<CalendarScreen> {
     await _reloadReminderPrefs();
   }
 
+  Future<void> _exportCompetitionIcs(Competition c) async {
+    try {
+      final api = Provider.of<ApiService>(context, listen: false);
+      final bytes = await api.downloadCompetitionIcsBytes(c.id);
+      final dir = await getTemporaryDirectory();
+      final slug =
+          c.title.replaceAll(RegExp(r'[^a-zA-Z0-9_-]+'), '_').replaceAll(RegExp(r'_+'), '_');
+      final path =
+          '${dir.path}/slavia_${c.id}${slug.isNotEmpty ? '_$slug' : ''}.ics';
+      await File(path).writeAsBytes(bytes, flush: true);
+      await OpenFilex.open(path);
+    } catch (e, st) {
+      debugPrint('$e\n$st');
+      LastErrorRecorder.record(e);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            friendlyNetworkError(e),
+            style: GoogleFonts.outfit(),
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
@@ -159,6 +190,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   );
                 }
                 if (snapshot.hasError) {
+                  LastErrorRecorder.record(snapshot.error!);
                   final msg = snapshot.error.toString();
                   final friendly = msg.contains('calendar_athlete_only')
                       ? 'Brak uprawnień do kalendarza zawodnika.'
@@ -388,6 +420,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: () => _exportCompetitionIcs(c),
+                          icon: Icon(
+                            Icons.calendar_month_outlined,
+                            size: 18,
+                            color: color,
+                          ),
+                          label: Text(
+                            'Dodaj do kalendarza (.ics)',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w700,
+                              color: cs.primary,
+                            ),
+                          ),
+                        ),
                       ),
                       if (_canScheduleReminder(c)) ...[
                         const SizedBox(height: 12),

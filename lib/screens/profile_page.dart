@@ -12,6 +12,8 @@ import '../widgets/biometric_gate.dart';
 import '../services/api_service.dart';
 import '../services/app_update_service.dart';
 import '../config/mobile_github_release.dart';
+import '../utils/report_problem.dart';
+import '../utils/last_error_recorder.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -390,6 +392,28 @@ class _ProfilePageState extends State<ProfilePage> {
                         themeProvider.setThemeMode(next.first);
                       },
                     ),
+                    const SizedBox(height: 18),
+                    SlaviaUi.sectionHeader(
+                      context,
+                      'Tryb zawody — wysoki kontrast',
+                      accent: Theme.of(context).colorScheme.tertiary,
+                      icon: Icons.wb_sunny_outlined,
+                    ),
+                    SwitchListTile.adaptive(
+                      secondary: Icon(
+                        Icons.contrast_rounded,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      title: const Text('Competition mode'),
+                      subtitle: const Text(
+                        'Wyostrza kolorystykę przy ciemnym motywie (pomost, ostre świetło outdoor).'
+                        ' Nie synchronizuje się z kontem — tylko to urządzenie.',
+                      ),
+                      value: themeProvider.outdoorCompetitionContrast,
+                      onChanged: (v) {
+                        themeProvider.setOutdoorCompetitionContrast(v);
+                      },
+                    ),
                     const SizedBox(height: 22),
                     SlaviaUi.sectionHeader(
                       context,
@@ -496,6 +520,26 @@ class _ProfilePageState extends State<ProfilePage> {
                       );
                     }),
                   ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: FilledButton.icon(
+                onPressed: () => openMobileBugReporter(context),
+                icon: const Icon(Icons.report_problem_outlined, size: 22),
+                label: const Text('Zgłoś problem'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(54),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 18,
+                  ),
+                  textStyle: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ),
@@ -627,6 +671,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ).showSnackBar(const SnackBar(content: Text('Konto zaktualizowane')));
       }
     } catch (e) {
+      LastErrorRecorder.record(e);
       if (mounted) {
         ScaffoldMessenger.of(
           context,

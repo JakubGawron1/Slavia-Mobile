@@ -229,6 +229,23 @@ class ApiService {
     throw Exception('Failed to load my calendar');
   }
 
+  /// ICS z backendu (`GET /api/system/calendar/export/{id}`) — idea #129.
+  Future<List<int>> downloadCompetitionIcsBytes(String competitionId) async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse(
+        '$baseUrl/api/system/calendar/export/${Uri.encodeComponent(competitionId)}',
+      ),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      return response.bodyBytes;
+    }
+    throw Exception(
+      'ICS export failed: HTTP ${response.statusCode} ${response.body}',
+    );
+  }
+
   /// Skład startowy zawodów (`GET /api/competitions/{id}/participants`).
   Future<List<CompetitionParticipantBrief>> getCompetitionParticipants(
     String competitionId,
