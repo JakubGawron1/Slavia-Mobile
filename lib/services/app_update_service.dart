@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -97,6 +98,7 @@ Future<GithubLatestRelease?> fetchLatestGithubRelease() async {
 }
 
 const _kDismissedTagKey = 'app_update_dismissed_tag';
+const _installChannel = MethodChannel('slavia_mobile/install_apk');
 
 class AppUpdateService {
   AppUpdateService._();
@@ -242,79 +244,233 @@ class AppUpdateService {
     }
   }
 
+  Future<bool> _ensureAndroidInstallAllowed(BuildContext context) async {
+    if (!Platform.isAndroid) return true;
+    final dynamic raw = await _installChannel.invokeMethod(
+      'canRequestPackageInstalls',
+    );
+    final can = raw == true;
+    if (can) return true;
+    if (!context.mounted) return false;
+    final open = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dlgCtx) => AlertDialog(
+        title: const Text('Zezwolenie na instalację'),
+        content: const Text(
+          'Android blokuje instalowanie aktualizacji z aplikacji, dopóki nie zezwolisz '
+          '„CKS Slavia” na instalowanie aplikacji z nieznanych źródeł.\n\n'
+          'Po otwarciu ustawień włącz przełącznik i wróć — ponów „Pobierz i zainstaluj”.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dlgCtx, false),
+            child: const Text('Anuluj'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dlgCtx, true),
+            child: const Text('Ustawienia'),
+          ),
+        ],
+      ),
+    );
+    if (open != true || !context.mounted) return false;
+    try {
+      await _installChannel.invokeMethod<void>('openManageUnknownAppSources');
+    } catch (_) {}
+    if (!context.mounted) return false;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Włącz instalację dla CKS Slavia w ustawieniach Androida, potem ponów pobieranie.',
+        ),
+        duration: Duration(seconds: 6),
+      ),
+    );
+    return false;
+  }
+
   Future<void> _downloadAndInstallApk(
     BuildContext context,
     String apkUrl,
     String tagForPrefs,
   ) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Pobieranie aktualizacji…'),
-        duration: Duration(seconds: 45),
-      ),
-    );
-    try {
-      final res = await http
-          .get(Uri.parse(apkUrl))
-          .timeout(const Duration(minutes: 5));
-      if (res.statusCode != 200) {
+    if (Platform.isAndroid) {
+      final allowed = await _ensureAndroidInstallAllowed(context);
+      if (!allowed || !context.mounted) return;
+      final dynamic again =
+          await _installChannel.invokeMethod('canRequestPackageInstalls');
+      if (again != true) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Błąd pobierania: ${res.statusCode}')),
+            const SnackBar(
+              content: Text(
+                'Android nie zezwolił jeszcze na instalację z tej aplikacji — sprawdź ustawienia.',
+              ),
+            ),
           );
         }
         return;
       }
+    }
+
+    if (!context.mounted) return;
+
+    final progress = ValueNotifier<double>(0);
+    final indeterminate = ValueNotifier<bool>(true);
+
+    void closeProgressUi() {
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).maybePop();
+    }
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dlgCtx) => PopScope(
+        canPop: false,
+        child: AnimatedBuilder(
+          animation: Listenable.merge([progress, indeterminate]),
+          builder: (context, _) {
+            final useInd = indeterminate.value;
+            final value = progress.value.clamp(0.0, 1.0);
+            final pct = (value * 100).floor();
+            return AlertDialog(
+                  title: const Text('Pobieranie aktualizacji'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (useInd)
+                        const LinearProgressIndicator()
+                      else
+                        LinearProgressIndicator(value: value),
+                      const SizedBox(height: 12),
+                      Text(
+                        useInd
+                            ? 'Pobieranie… (brak rozmiaru z serwera — bez %)'
+                            : '$pct%',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Po zakończeniu otworzy się instalator systemu.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                );
+          },
+        ),
+      ),
+    );
+
+    final client = http.Client();
+    try {
+      final req = http.Request('GET', Uri.parse(apkUrl));
+      final streamed = await client
+          .send(req)
+          .timeout(const Duration(minutes: 10));
+
+      if (streamed.statusCode != 200) {
+        closeProgressUi();
+        progress.dispose();
+        indeterminate.dispose();
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Błąd pobierania: HTTP ${streamed.statusCode}'),
+          ),
+        );
+        return;
+      }
+
+      final totalBytes = streamed.contentLength;
+      final hasTotal = totalBytes != null && totalBytes > 0;
+      indeterminate.value = !hasTotal;
+
       final dir = await getTemporaryDirectory();
       final path =
           '${dir.path}/slavia_update_${DateTime.now().millisecondsSinceEpoch}.apk';
-      final f = File(path);
-      await f.writeAsBytes(res.bodyBytes, flush: true);
+      final file = File(path);
+      final sink = file.openWrite();
+
+      var received = 0;
+      await for (final chunk
+          in streamed.stream.timeout(const Duration(minutes: 15))) {
+        sink.add(chunk);
+        received += chunk.length;
+        if (hasTotal) {
+          progress.value = (received / totalBytes).clamp(0.0, 1.0);
+        }
+      }
+      await sink.close();
+      indeterminate.value = false;
+      progress.value = 1;
+
+      closeProgressUi();
+      progress.dispose();
+      indeterminate.dispose();
 
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
       if (Platform.isAndroid) {
-        const ch = MethodChannel('slavia_mobile/install_apk');
         try {
-          await ch.invokeMethod<bool>('install', <String, dynamic>{
+          await _installChannel.invokeMethod<bool>('install', <String, dynamic>{
             'path': path,
           });
         } on PlatformException catch (e) {
-          final OpenResult result = await OpenFilex.open(
+          final OpenResult openResult = await OpenFilex.open(
             path,
             type: 'application/vnd.android.package-archive',
           );
-          if (result.type != ResultType.done && context.mounted) {
+          if (openResult.type != ResultType.done && context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  'Instalacja: ${e.message ?? e.code}; open_filex: ${result.message}',
+                  '${e.message ?? e.code}; otwarcie pliku: ${openResult.message}',
                 ),
               ),
             );
           }
         }
       } else {
-        final OpenResult result = await OpenFilex.open(path);
-        if (result.type != ResultType.done && context.mounted) {
+        final OpenResult openResult = await OpenFilex.open(path);
+        if (openResult.type != ResultType.done && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Otwieranie instalatora: ${result.message}'),
+              content: Text('Otwieranie pliku: ${openResult.message}'),
             ),
           );
         }
       }
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_kDismissedTagKey, tagForPrefs);
-    } catch (e) {
+    } on TimeoutException catch (_) {
+      closeProgressUi();
+      progress.dispose();
+      indeterminate.dispose();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Błąd: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Przekroczono czas pobierania. Sprawdź sieć i spróbuj ponownie.',
+            ),
+          ),
+        );
       }
+    } catch (e) {
+      closeProgressUi();
+      progress.dispose();
+      indeterminate.dispose();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Błąd: $e')),
+        );
+      }
+    } finally {
+      client.close();
     }
   }
 }

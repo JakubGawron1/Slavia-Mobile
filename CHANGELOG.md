@@ -1,5 +1,16 @@
 # Changelog — Slavia Mobile
 
+## [0.9.1+2] — 2026-05-15
+
+### Naprawki
+- **Instalacja APK z aplikacji** — usunięto `FLAG_ACTIVITY_NEW_TASK` przy otwieraniu instalatora (częsty powód „pakiet się nie instaluje”). Dodano `grantUriPermission` dla obsługi `intent`, `ClipData`, obsługa braku uprawnienia **Instalacja z nieznanych źródeł** (dialog + przejście do ustawień).
+- **Pobieranie aktualizacji** — zapis na dysk przez strumień (mniej RAM); dialog z **`LinearProgressIndicator` i %-em**, gdy serwer podaje `Content-Length`.
+
+### Drobne
+- `dart analyze lib` bez problemów (`use_build_context_synchronously`, przestarzałe pole w wyborze płci).
+
+---
+
 ## [v0.9.0-dev] — 2026-05-15
 
 ### Nowe funkcje

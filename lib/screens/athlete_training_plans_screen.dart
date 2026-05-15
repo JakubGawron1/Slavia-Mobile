@@ -495,6 +495,7 @@ class _TrainingPlanDetailPageState extends State<_TrainingPlanDetailPage> {
     final athleteId = auth.user?.athleteId;
     if (athleteId == null) return;
 
+    final api = Provider.of<ApiService>(context, listen: false);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -546,7 +547,6 @@ class _TrainingPlanDetailPageState extends State<_TrainingPlanDetailPage> {
     }
 
     try {
-      final api = Provider.of<ApiService>(context, listen: false);
       await api.createTrainingLogEntry(
         athleteId,
         buffer.toString(),

@@ -261,18 +261,27 @@ class _ProfilePageState extends State<ProfilePage> {
                         icon: Icons.person_outline,
                       ),
                       const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        value: _gender,
-                        decoration: const InputDecoration(
-                          labelText: 'Płeć',
-                          prefixIcon: Icon(Icons.transgender),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'male', child: Text('Mężczyzna')),
-                          DropdownMenuItem(value: 'female', child: Text('Kobieta')),
-                        ],
-                        onChanged: (v) => setState(() => _gender = v),
+                    InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Płeć',
+                        prefixIcon: Icon(Icons.transgender),
                       ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          hint: const Text('Wybierz'),
+                          value: (_gender != null &&
+                                  (_gender == 'male' || _gender == 'female'))
+                              ? _gender
+                              : null,
+                          items: const [
+                            DropdownMenuItem(value: 'male', child: Text('Mężczyzna')),
+                            DropdownMenuItem(value: 'female', child: Text('Kobieta')),
+                          ],
+                          onChanged: (v) => setState(() => _gender = v),
+                        ),
+                      ),
+                    ),
                       const SizedBox(height: 16),
                       TextField(
                         controller: _birthYearController,

@@ -273,11 +273,12 @@ class _LoginScreenState extends State<LoginScreen> {
     final prefs = await SharedPreferences.getInstance();
     final u = prefs.getString('saved_username');
     final p = prefs.getString('saved_password');
-    if (u != null && p != null) {
-      _usernameController.text = u;
-      _passwordController.text = p;
-      await _tryLogin(context, auth);
-    }
+    if (u == null || p == null) return;
+    if (!context.mounted) return;
+
+    _usernameController.text = u;
+    _passwordController.text = p;
+    await _tryLogin(context, auth);
   }
 
   Future<void> _tryLogin(BuildContext context, AuthProvider auth) async {
