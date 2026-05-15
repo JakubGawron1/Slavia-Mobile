@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:local_auth/local_auth.dart';
 import '../main.dart';
 import '../utils/theme_provider.dart';
 import '../ui/slavia_ui.dart';
@@ -26,6 +27,8 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isSaving = false;
   bool _isUploading = false;
   bool _biometricUnlock = false;
+  final _birthYearController = TextEditingController();
+  String? _gender;
 
   @override
   void initState() {
@@ -33,6 +36,8 @@ class _ProfilePageState extends State<ProfilePage> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     _avatarUrlController.text =
         auth.user?.avatarUrl ?? auth.user?.athleteImageUrl ?? '';
+    _birthYearController.text = auth.user?.athleteBirthYear?.toString() ?? '';
+    _gender = auth.user?.athleteGender;
     _loadBiometricPref();
   }
 
@@ -150,15 +155,67 @@ class _ProfilePageState extends State<ProfilePage> {
                   Icons.fingerprint_rounded,
                   color: Theme.of(context).colorScheme.primary,
                 ),
-                title: const Text('Odblokowanie biometrią'),
+                title: const Text('Logowanie biometryczne'),
                 subtitle: const Text(
-                  'Po powrocie z innej aplikacji — Face ID, odcisk lub kod urządzenia.',
+                  'Szybkie odblokowanie aplikacji oraz logowanie bez hasła (Face ID, odcisk lub kod).',
                 ),
                 value: _biometricUnlock,
                 onChanged: (v) async {
                   final p = await SharedPreferences.getInstance();
-                  await p.setBool(kBiometricUnlockPrefKey, v);
-                  if (mounted) setState(() => _biometricUnlock = v);
+                  if (!v) {
+                    await p.setBool(kBiometricUnlockPrefKey, false);
+                    if (mounted) setState(() => _biometricUnlock = false);
+                    return;
+                  }
+                  final auth = LocalAuthentication();
+                  final supported = await auth.isDeviceSupported();
+                  final canBio = await auth.canCheckBiometrics;
+                  if (!supported && !canBio) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'To urządzenie nie obsługuje biometrii ani bezpiecznego kodu ekranu w tej konfiguracji.',
+                          style: GoogleFonts.outfit(),
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                  try {
+                    final ok = await auth.authenticate(
+                      localizedReason: 'Włącz ochronę biometryczną dla CKS Slavia',
+                      options: const AuthenticationOptions(
+                        stickyAuth: true,
+                        biometricOnly: false,
+                      ),
+                    );
+                    if (!ok) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Anulowano — ochrona nie została włączona.',
+                            style: GoogleFonts.outfit(),
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Biometria: $e',
+                          style: GoogleFonts.outfit(),
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                  await p.setBool(kBiometricUnlockPrefKey, true);
+                  if (mounted) setState(() => _biometricUnlock = true);
                 },
               ),
             ]),
@@ -195,6 +252,38 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       obscureText: true,
                     ),
+                    if ((auth.user?.roles ?? []).contains('Athlete')) ...[
+                      const SizedBox(height: 24),
+                      SlaviaUi.sectionHeader(
+                        context,
+                        'Dane zawodnika',
+                        accent: Theme.of(context).colorScheme.primary,
+                        icon: Icons.person_outline,
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: _gender,
+                        decoration: const InputDecoration(
+                          labelText: 'Płeć',
+                          prefixIcon: Icon(Icons.transgender),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'male', child: Text('Mężczyzna')),
+                          DropdownMenuItem(value: 'female', child: Text('Kobieta')),
+                        ],
+                        onChanged: (v) => setState(() => _gender = v),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _birthYearController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Rok urodzenia',
+                          hintText: 'np. 2005',
+                          prefixIcon: Icon(Icons.calendar_today),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
@@ -514,6 +603,14 @@ class _ProfilePageState extends State<ProfilePage> {
             ? _passwordController.text
             : null,
       );
+
+      if ((auth.user?.roles ?? []).contains('Athlete')) {
+        await apiService.updateMyAthleteProfile(
+          birthYear: int.tryParse(_birthYearController.text),
+          gender: _gender,
+        );
+      }
+
       await auth.refreshMe();
       if (mounted) {
         ScaffoldMessenger.of(

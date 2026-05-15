@@ -33,6 +33,7 @@ class AuthUser {
   final String? uiThemePreset;
   final String? uiColorMode;
   final String? athleteGender;
+  final int? athleteBirthYear;
 
   AuthUser({
     required this.id,
@@ -48,6 +49,7 @@ class AuthUser {
     this.uiThemePreset,
     this.uiColorMode,
     this.athleteGender,
+    this.athleteBirthYear,
   });
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
@@ -65,6 +67,7 @@ class AuthUser {
       uiThemePreset: json['ui_theme_preset'] as String?,
       uiColorMode: json['ui_color_mode'] as String?,
       athleteGender: json['athlete_gender'] as String?,
+      athleteBirthYear: json['athlete_birth_year'] as int?,
     );
   }
 }

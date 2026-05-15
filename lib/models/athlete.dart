@@ -14,6 +14,7 @@ class Athlete {
   final String? tagline;
   final String? bio;
   final bool isActive;
+  final bool hasStandingOrder;
 
   Athlete({
     required this.id,
@@ -31,6 +32,7 @@ class Athlete {
     this.tagline,
     this.bio,
     required this.isActive,
+    required this.hasStandingOrder,
   });
 
   factory Athlete.fromJson(Map<String, dynamic> json) {
@@ -50,6 +52,7 @@ class Athlete {
       tagline: json['profile_tagline'],
       bio: json['public_bio'],
       isActive: json['is_active'] ?? true,
+      hasStandingOrder: json['has_standing_order'] ?? false,
     );
   }
 }

@@ -17,6 +17,14 @@ import '../ui/slavia_ui.dart';
 import 'athlete_training_plans_screen.dart';
 import 'trainer_training_plans_screen.dart';
 import 'training_log_screen.dart';
+import 'recovery_journal_screen.dart';
+import 'athlete_timeline_screen.dart';
+import 'athlete_achievements_screen.dart';
+import '../models/club_post.dart';
+import '../utils/html_plain_text.dart';
+import 'club_posts_screen.dart';
+import 'club_post_detail_screen.dart';
+import 'club_gallery_screen.dart';
 
 String _primaryRoleLabel(List<String> roles) {
   if (roles.contains('SuperAdmin')) return 'SuperAdmin';
@@ -107,6 +115,13 @@ class DashboardPage extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
             sliver: SliverToBoxAdapter(
               child: _QuickAccessRow(auth: auth, primary: primary),
+            ),
+          ),
+
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+            sliver: SliverToBoxAdapter(
+              child: _ClubPostsPreview(apiService: apiService, primary: primary),
             ),
           ),
 
@@ -443,6 +458,20 @@ class _QuickAccessRow extends StatelessWidget {
     final tiles = <Widget>[
       _quickTile(
         context,
+        'Aktualności',
+        Icons.newspaper_rounded,
+        Colors.teal,
+        () => push(const ClubPostsScreen()),
+      ),
+      _quickTile(
+        context,
+        'Galeria',
+        Icons.photo_library_outlined,
+        Colors.indigo,
+        () => push(const ClubGalleryScreen()),
+      ),
+      _quickTile(
+        context,
         'Sinclair',
         Icons.calculate_rounded,
         Colors.amber,
@@ -457,6 +486,23 @@ class _QuickAccessRow extends StatelessWidget {
       ),
     ];
     if (isAthlete) {
+      final myAthleteId = auth.user?.athleteId;
+      if (myAthleteId != null && myAthleteId.isNotEmpty) {
+        tiles.add(
+          _quickTile(
+            context,
+            'Oś czasu',
+            Icons.timeline_rounded,
+            Colors.brown,
+            () => push(
+              AthleteTimelineScreen(
+                athleteId: myAthleteId,
+                subtitle: 'Mój profil',
+              ),
+            ),
+          ),
+        );
+      }
       tiles.add(
         _quickTile(
           context,
@@ -464,6 +510,24 @@ class _QuickAccessRow extends StatelessWidget {
           Icons.book_outlined,
           Colors.teal,
           () => push(const TrainingLogScreen()),
+        ),
+      );
+      tiles.add(
+        _quickTile(
+          context,
+          'Regeneracja',
+          Icons.spa_outlined,
+          Colors.indigo,
+          () => push(const RecoveryJournalScreen()),
+        ),
+      );
+      tiles.add(
+        _quickTile(
+          context,
+          'Osiągnięcia',
+          Icons.military_tech_rounded,
+          Colors.amber,
+          () => push(const AthleteAchievementsScreen()),
         ),
       );
       tiles.add(
@@ -600,14 +664,11 @@ class _QuickStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: primary.withValues(alpha: 0.1)),
-        ),
+        decoration: SlaviaUi.statCardDecoration(context, primary),
         child: Row(
           children: [
             Container(
@@ -628,7 +689,7 @@ class _QuickStatCard extends StatelessWidget {
                     label,
                     style: GoogleFonts.outfit(
                       fontSize: 11,
-                      color: Colors.grey[600],
+                      color: cs.onSurface.withValues(alpha: 0.55),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -637,6 +698,7 @@ class _QuickStatCard extends StatelessWidget {
                     style: GoogleFonts.outfit(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
+                      color: cs.onSurface,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -781,6 +843,187 @@ class _AnnouncementCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ClubPostsPreview extends StatelessWidget {
+  const _ClubPostsPreview({required this.apiService, required this.primary});
+
+  final ApiService apiService;
+  final Color primary;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: primary,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      'Aktualności klubu',
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  Navigator.push<void>(
+                    context,
+                    MaterialPageRoute<void>(builder: (_) => const ClubPostsScreen()),
+                  );
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Wszystkie',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: primary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        FutureBuilder<List<ClubPost>>(
+          future: apiService.getClubPosts(),
+          builder: (context, snap) {
+            if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
+              return Column(
+                children: List.generate(
+                  2,
+                  (i) => _AnnouncementSkeleton(isDark: isDark),
+                ),
+              );
+            }
+            if (snap.hasError) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Nie udało się wczytać aktualności.',
+                  style: GoogleFonts.outfit(fontSize: 13, color: cs.error),
+                ),
+              );
+            }
+            final list = (snap.data ?? []).take(3).toList();
+            if (list.isEmpty) {
+              return _EmptyState(
+                icon: Icons.article_outlined,
+                title: 'Brak aktualności',
+                subtitle: 'Redakcyjne wpisy z klubu pojawią się tutaj.',
+              );
+            }
+            return Column(
+              children: list.asMap().entries.map((e) {
+                final p = e.value;
+                final excerpt = htmlToPlainText(p.content);
+                final short =
+                    excerpt.length > 88 ? '${excerpt.substring(0, 88)}…' : excerpt;
+                return Padding(
+                  padding: EdgeInsets.only(bottom: e.key < list.length - 1 ? 10 : 0),
+                  child: Material(
+                    color: cs.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () {
+                        Navigator.push<void>(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) => ClubPostDetailScreen(post: p),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: primary.withValues(alpha: 0.1)),
+                        ),
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: cs.tertiary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Icon(Icons.newspaper_rounded, color: cs.tertiary, size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    p.title,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (short.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      short,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        color: cs.onSurface.withValues(alpha: 0.6),
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
     );
   }
 }

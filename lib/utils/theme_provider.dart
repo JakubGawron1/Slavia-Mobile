@@ -207,6 +207,16 @@ class ThemeProvider with ChangeNotifier {
           side: BorderSide(color: outline),
         ),
       ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+          TargetPlatform.fuchsia: FadeUpwardsPageTransitionsBuilder(),
+          TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+          TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
       dividerTheme: DividerThemeData(color: outline.withValues(alpha: 0.65)),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

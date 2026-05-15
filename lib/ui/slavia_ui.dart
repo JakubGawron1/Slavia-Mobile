@@ -155,4 +155,88 @@ abstract final class SlaviaUi {
       ),
     );
   }
+
+  /// Pusty stan z ikoną w „bańce” (listy, dzienniki).
+  static Widget emptyState(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    String? subtitle,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: cs.primary.withValues(alpha: 0.09),
+              boxShadow: [
+                BoxShadow(
+                  color: cs.primary.withValues(alpha: 0.12),
+                  blurRadius: 28,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: Icon(icon, size: 42, color: cs.primary.withValues(alpha: 0.88)),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.outfit(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              height: 1.25,
+              color: cs.onSurface,
+            ),
+          ),
+          if (subtitle != null && subtitle.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                height: 1.4,
+                color: cs.onSurface.withValues(alpha: 0.62),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Karta KPI na dashboardzie — obramowanie z lekkim „światłem” akcentu.
+  static BoxDecoration statCardDecoration(BuildContext context, Color accent) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(radiusLg),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          cs.surface,
+          cs.surfaceContainerHighest.withValues(alpha: isDark ? 0.35 : 0.5),
+        ],
+      ),
+      border: Border.all(
+        width: 1.5,
+        color: Color.lerp(accent, cs.outline, 0.55)!,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: accent.withValues(alpha: isDark ? 0.12 : 0.08),
+          blurRadius: 18,
+          offset: const Offset(0, 8),
+        ),
+      ],
+    );
+  }
 }

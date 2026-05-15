@@ -487,6 +487,83 @@ class _TrainingPlanDetailPageState extends State<_TrainingPlanDetailPage> {
     }
   }
 
+  Future<void> _copyToLog(BuildContext context) async {
+    final dayItems = _itemsForDay(_activeDay);
+    if (dayItems.isEmpty) return;
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final athleteId = auth.user?.athleteId;
+    if (athleteId == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Kopiuj do dziennika'),
+        content: Text(
+          'Czy chcesz skopiować dzisiejsze ćwiczenia (${dayItems.length}) jako nowy wpis w Twoim dzienniku treningowym?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Anuluj')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Kopiuj')),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // Format the items
+    final buffer = StringBuffer();
+    buffer.writeln('Trening z planu: ${widget.plan.title}');
+    buffer.writeln('Dzień: ${_kDayNames[_activeDay - 1]}');
+    buffer.writeln('');
+
+    for (var i = 0; i < dayItems.length; i++) {
+      final item = dayItems[i];
+      buffer.write('${i + 1}. ${item.displayName}');
+      
+      final meta = <String>[];
+      if (item.sets != null && item.reps != null) {
+        meta.add('${item.sets}×${item.reps}');
+      } else if (item.sets != null) {
+        meta.add('serie: ${item.sets}');
+      } else if (item.reps != null) {
+        meta.add('powt.: ${item.reps}');
+      }
+      if (item.intensityPercent != null) {
+        meta.add('${item.intensityPercent!.round()}%');
+      }
+      if (item.weightKg != null) {
+        meta.add('${item.weightKg} kg');
+      }
+      
+      if (meta.isNotEmpty) {
+        buffer.write(' [${meta.join(' · ')}]');
+      }
+      buffer.writeln();
+      if (item.notes != null && item.notes!.trim().isNotEmpty) {
+        buffer.writeln('   Note: ${item.notes!.trim()}');
+      }
+    }
+
+    try {
+      final api = Provider.of<ApiService>(context, listen: false);
+      await api.createTrainingLogEntry(
+        athleteId,
+        buffer.toString(),
+        'Trening: ${widget.plan.title}',
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Dodano wpis do dziennika treningowego')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Błąd kopiowania: $e')),
+      );
+    }
+  }
+
   List<TrainingPlanItem> _itemsForDay(int day) {
     return _items
         .where((i) => i.dayOfWeek == day)
@@ -583,19 +660,39 @@ class _TrainingPlanDetailPageState extends State<_TrainingPlanDetailPage> {
                     }),
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    _kDayNames[_activeDay - 1],
-                    style: GoogleFonts.outfit(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  Text(
-                    '${_itemsForDay(_activeDay).length} ćwiczeń',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: cs.onSurface.withValues(alpha: 0.6),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _kDayNames[_activeDay - 1],
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            '${_itemsForDay(_activeDay).length} ćwiczeń',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cs.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_itemsForDay(_activeDay).isNotEmpty)
+                        TextButton.icon(
+                          onPressed: () => _copyToLog(context),
+                          icon: const Icon(Icons.copy_rounded, size: 18),
+                          label: const Text('Do dziennika'),
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 13),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   if (_itemsForDay(_activeDay).isEmpty)

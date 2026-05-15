@@ -4,6 +4,7 @@ import '../utils/app_shortcuts_bridge.dart';
 
 const _kChat = 'shortcut_chat';
 const _kTraining = 'shortcut_training';
+const _kCalendar = 'shortcut_calendar';
 
 /// Skróty na ekranie głównym (Android / iOS) — idea #112.
 class AppShortcutsService {
@@ -29,6 +30,11 @@ class AppShortcutsService {
         type: _kTraining,
         localizedTitle: 'Dziennik treningów',
         localizedSubtitle: 'CKS Slavia',
+      ),
+      const ShortcutItem(
+        type: _kCalendar,
+        localizedTitle: 'Moje starty',
+        localizedSubtitle: 'Kalendarz zawodów',
       ),
     ]);
   }

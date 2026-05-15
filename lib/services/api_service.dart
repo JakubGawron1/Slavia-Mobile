@@ -7,11 +7,17 @@ import '../models/auth.dart';
 import '../models/athlete.dart';
 import '../models/notification.dart';
 import '../models/competition.dart';
+import '../models/competition_participant.dart';
 import '../models/announcement.dart';
 import '../models/chat.dart';
 import '../models/athlete_timeline_item.dart';
 import '../models/training_plan.dart';
 import '../models/exercise.dart';
+import '../models/recovery_log.dart';
+import '../models/attendance_summary.dart';
+import '../models/club_post.dart';
+import '../models/gallery_photo.dart';
+import '../models/payment.dart';
 import '../config/api_base.dart';
 
 class ApiService {
@@ -102,6 +108,22 @@ class ApiService {
     } else {
       throw Exception('Failed to load athlete');
     }
+  }
+
+  Future<AttendanceSummary> getAttendanceSummary(String athleteId) async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/attendance/summary/$athleteId'),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      return AttendanceSummary.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+    throw Exception(
+      'Failed to load attendance summary: ${response.statusCode}',
+    );
   }
 
   // Notifications
@@ -207,6 +229,52 @@ class ApiService {
     throw Exception('Failed to load my calendar');
   }
 
+  /// Skład startowy zawodów (`GET /api/competitions/{id}/participants`).
+  Future<List<CompetitionParticipantBrief>> getCompetitionParticipants(
+    String competitionId,
+  ) async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse(
+        '$baseUrl/api/competitions/${Uri.encodeComponent(competitionId)}/participants',
+      ),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data
+          .map(
+            (e) => CompetitionParticipantBrief.fromJson(
+              e as Map<String, dynamic>,
+            ),
+          )
+          .toList();
+    }
+    throw Exception(
+      'Failed to load participants: ${response.statusCode} ${response.body}',
+    );
+  }
+
+  /// Nadpisuje listę przypisań (jak panel WWW — `PUT` z pełną listą `athlete_ids`).
+  Future<void> setCompetitionParticipants(
+    String competitionId,
+    List<String> athleteIds,
+  ) async {
+    final token = await getToken();
+    final response = await http.put(
+      Uri.parse(
+        '$baseUrl/api/competitions/${Uri.encodeComponent(competitionId)}/participants',
+      ),
+      headers: _headers(token),
+      body: jsonEncode({'athlete_ids': athleteIds}),
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception(
+        'Failed to save roster: ${response.statusCode} ${response.body}',
+      );
+    }
+  }
+
   // Announcements
   Future<List<Announcement>> getAnnouncements() async {
     final token = await getToken();
@@ -309,6 +377,50 @@ class ApiService {
     }
   }
 
+  /// Wpisy aktualności z WWW (`/aktualnosci`) — publiczna lista z API.
+  Future<List<ClubPost>> getClubPosts() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/posts'),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as List<dynamic>;
+      return data
+          .map((e) => ClubPost.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to load club posts');
+  }
+
+  Future<ClubPost> getClubPost(String id) async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/posts/${Uri.encodeComponent(id)}'),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      return ClubPost.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw Exception('Failed to load post');
+  }
+
+  /// Galeria klubu — opublikowane media.
+  Future<List<GalleryPhoto>> getGalleryPhotos() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/gallery'),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as List<dynamic>;
+      return data
+          .map((e) => GalleryPhoto.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to load gallery');
+  }
+
   // Training Log
   Future<List<TrainingLogEntry>> getTrainingLog(String athleteId) async {
     final token = await getToken();
@@ -400,6 +512,27 @@ class ApiService {
 
     if (response.statusCode != 200) {
       throw Exception('Failed to update profile');
+    }
+  }
+
+  Future<void> updateMyAthleteProfile({
+    int? birthYear,
+    String? gender,
+  }) async {
+    final token = await getToken();
+    final body = {
+      if (birthYear != null) 'birth_year': birthYear,
+      if (gender != null) 'gender': gender,
+    };
+
+    final response = await http.patch(
+      Uri.parse('$baseUrl/api/athletes/me'),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update athlete profile');
     }
   }
 
@@ -953,6 +1086,132 @@ class ApiService {
         .toList();
     await putTrainingPlanItems(created.id, payloads);
     return created;
+  }
+
+  /// Dziennik regeneracji zawodnika (`GET /api/recovery`).
+  Future<List<RecoveryLog>> getMyRecoveryLogs() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/recovery'),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data
+          .map((e) => RecoveryLog.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception(
+      'Failed to load recovery logs: ${response.statusCode} ${response.body}',
+    );
+  }
+
+  Future<RecoveryLog> upsertMyRecoveryLog({
+    required String date,
+    required double sleepHours,
+    required int fatigueLevel,
+    required int sorenessLevel,
+    required int readinessLevel,
+    String? note,
+  }) async {
+    final token = await getToken();
+    final body = <String, dynamic>{
+      'date': date.trim(),
+      'sleep_hours': sleepHours.clamp(0.0, 24.0),
+      'fatigue_level': fatigueLevel.clamp(1, 10),
+      'soreness_level': sorenessLevel.clamp(1, 10),
+      'readiness_level': readinessLevel.clamp(1, 10),
+    };
+    if (note != null && note.trim().isNotEmpty) {
+      body['note'] = note.trim();
+    }
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/recovery'),
+      headers: _headers(token),
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 200) {
+      return RecoveryLog.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+    throw Exception(
+      'Failed to save recovery log: ${response.statusCode} ${response.body}',
+    );
+  }
+
+  // Payments
+  Future<PaymentStatusResponse> getMyPaymentStatus({String? month}) async {
+    final token = await getToken();
+    final q = month == null ? '' : '?month=${Uri.encodeQueryComponent(month)}';
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/payments/my/status$q'),
+      headers: _headers(token),
+    );
+
+    if (response.statusCode == 200) {
+      return PaymentStatusResponse.fromJson(jsonDecode(response.body));
+    }
+    throw Exception('Failed to load payment status');
+  }
+
+  Future<List<PaymentMonthStatusRow>> getMyPaymentsYear({int? year}) async {
+    final token = await getToken();
+    final q = year == null ? '' : '?year=$year';
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/payments/my/year$q'),
+      headers: _headers(token),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((e) => PaymentMonthStatusRow.fromJson(e)).toList();
+    }
+    throw Exception('Failed to load yearly payments');
+  }
+
+  Future<void> createMyPayment({
+    String? month,
+    double? amountPln,
+    String? note,
+  }) async {
+    final token = await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/payments/my'),
+      headers: _headers(token),
+      body: jsonEncode({
+        if (month != null) 'month': month,
+        if (amountPln != null) 'amount_pln': amountPln,
+        if (note != null) 'note': note,
+      }),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Failed to submit payment: ${response.body}');
+    }
+  }
+
+  Future<void> upsertAttendance({
+    required String athleteId,
+    required String sessionDate,
+    required String status,
+    String? note,
+  }) async {
+    final token = await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/attendance'),
+      headers: _headers(token),
+      body: jsonEncode({
+        'athlete_id': athleteId,
+        'session_date': sessionDate,
+        'status': status,
+        if (note != null) 'note': note,
+      }),
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Failed to upsert attendance: ${response.body}');
+    }
   }
 }
 

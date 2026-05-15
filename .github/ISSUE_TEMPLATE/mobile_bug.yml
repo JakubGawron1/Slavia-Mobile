@@ -1,0 +1,38 @@
+name: Mobile bug
+description: Błąd aplikacji Flutter (CKS Slavia)
+title: "[Mobile] "
+labels: ["mobile", "bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Wersja aplikacji
+      placeholder: np. 0.8.0 (build 42)
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Urządzenie i OS
+      placeholder: np. Samsung S23, Android 14
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Kroki reprodukcji
+      placeholder: 1. Otwórz… 2. Kliknij…
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Oczekiwane zachowanie
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Rzeczywiste zachowanie
+    validations:
+      required: true

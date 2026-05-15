@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 #
 # Android: `android/app/build.gradle.kts` — versionName z tagu Git (exact / najnowszy v*), versionCode z `git rev-list --count`.
 # iOS / PackageInfo: domyślnie ta sama linia `version` (fallback gdy Gradle nie buduje).
-version: 0.8.0+1
+version: 0.9.0+1
 
 environment:
   sdk: ^3.9.2
@@ -38,7 +38,6 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   google_fonts: ^8.1.0
-  animations: ^2.2.0
   shared_preferences: ^2.5.5
   provider: ^6.1.5+1
   intl: ^0.20.2
@@ -55,6 +54,7 @@ dependencies:
   app_badge_plus: ^1.2.3
   timezone: ^0.10.1
   flutter_timezone: ^4.1.0
+  html: ^0.15.6
 
 dev_dependencies:
   flutter_test:

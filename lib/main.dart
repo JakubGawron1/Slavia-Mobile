@@ -132,11 +132,14 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  void logout() {
+  void logout() async {
     _apiService.setToken(null);
     PushNotificationService().stopPolling();
     PushNotificationService().clearSeenIds();
     unawaited(AppBadgePlus.updateBadge(0));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('saved_username');
+    await prefs.remove('saved_password');
     _isAuthenticated = false;
     _user = null;
     notifyListeners();

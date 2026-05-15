@@ -48,12 +48,18 @@ class _BiometricGateState extends State<BiometricGate>
     if (!(prefs.getBool(kBiometricUnlockPrefKey) ?? false)) return;
     final paused = _pausedAt;
     if (paused == null) return;
-    if (DateTime.now().difference(paused) < const Duration(seconds: 12)) {
+    // Krótkie przełączenia (np. powiadomienie) — bez blokady.
+    if (DateTime.now().difference(paused) < const Duration(seconds: 8)) {
+      _pausedAt = null;
       return;
     }
     final auth = LocalAuthentication();
-    final can = await auth.canCheckBiometrics || await auth.isDeviceSupported();
-    if (!can || !mounted) return;
+    final supported = await auth.isDeviceSupported();
+    final hasBiometrics = await auth.canCheckBiometrics;
+    if ((!supported && !hasBiometrics) || !mounted) {
+      _pausedAt = null;
+      return;
+    }
     setState(() => _locked = true);
     await _unlockInternal();
   }
@@ -68,7 +74,15 @@ class _BiometricGateState extends State<BiometricGate>
           biometricOnly: false,
         ),
       );
-      if (mounted) setState(() => _locked = !ok);
+      if (!mounted) return;
+      if (ok) {
+        setState(() {
+          _locked = false;
+          _pausedAt = null;
+        });
+      } else {
+        setState(() => _locked = true);
+      }
     } catch (_) {
       if (mounted) setState(() => _locked = true);
     }

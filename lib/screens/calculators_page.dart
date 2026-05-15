@@ -12,7 +12,12 @@ import 'user_management_screen.dart';
 import 'athlete_portal_screen.dart';
 import 'superadmin_athlete_manager_screen.dart';
 import 'competition_assignment_screen.dart';
+import 'recovery_journal_screen.dart';
 import 'announcements_manage_screen.dart';
+import 'athlete_timeline_screen.dart';
+import 'club_posts_screen.dart';
+import 'club_gallery_screen.dart';
+import 'athlete_achievements_screen.dart';
 
 class CalculatorsPage extends StatelessWidget {
   const CalculatorsPage({super.key});
@@ -63,6 +68,28 @@ class CalculatorsPage extends StatelessWidget {
             ),
           ),
 
+          _sectionHeader(
+            'Treść z serwisu',
+            Icons.newspaper_rounded,
+            Colors.teal,
+          ),
+          _toolCard(
+            context,
+            'Aktualności klubu',
+            'Wpisy redakcyjne — to samo API co „Aktualności” na stronie WWW.',
+            Icons.article_rounded,
+            Colors.teal,
+            const ClubPostsScreen(),
+          ),
+          _toolCard(
+            context,
+            'Galeria klubu',
+            'Zdjęcia i filmy opublikowane w klubie (API galerii).',
+            Icons.photo_library_outlined,
+            Colors.indigo,
+            const ClubGalleryScreen(),
+          ),
+
           // Athlete section
           if (roles.contains('Athlete')) ...[
             _sectionHeader(
@@ -78,6 +105,18 @@ class CalculatorsPage extends StatelessWidget {
               Colors.purple,
               const AthletePortalScreen(),
             ),
+            if ((auth.user?.athleteId ?? '').isNotEmpty)
+              _toolCard(
+                context,
+                'Oś czasu',
+                'Wyniki zawodów, obecność, wpisy dziennika — jak na WWW.',
+                Icons.timeline_rounded,
+                Colors.brown,
+                AthleteTimelineScreen(
+                  athleteId: auth.user!.athleteId!,
+                  subtitle: 'Mój profil',
+                ),
+              ),
             _toolCard(
               context,
               'Dziennik treningów',
@@ -85,6 +124,22 @@ class CalculatorsPage extends StatelessWidget {
               Icons.book_outlined,
               Colors.teal,
               const TrainingLogScreen(),
+            ),
+            _toolCard(
+              context,
+              'Dziennik regeneracji',
+              'Sen, zmęczenie, ból i gotowość — jak na stronie klubu.',
+              Icons.spa_outlined,
+              Colors.indigo,
+              const RecoveryJournalScreen(),
+            ),
+            _toolCard(
+              context,
+              'Osiągnięcia',
+              'Odznaki za Sinclair, dwubój, boje i frekwencję — jak na WWW.',
+              Icons.military_tech_rounded,
+              Colors.amber,
+              const AthleteAchievementsScreen(),
             ),
             _toolCard(
               context,

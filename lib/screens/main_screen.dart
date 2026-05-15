@@ -2,24 +2,17 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:animations/animations.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../main.dart';
-import '../config/app_brand.dart';
 import '../services/app_shortcuts_service.dart';
 import '../services/app_update_service.dart';
 import '../services/push_notification_service.dart';
 import '../utils/app_shortcuts_bridge.dart';
-import '../ui/slavia_ui.dart';
-import 'dashboard_page.dart';
-import 'announcement_page.dart';
+import '../navigation/app_drawer.dart';
+import '../navigation/main_tab.dart';
 import 'profile_page.dart';
 import 'notification_screen.dart';
-import 'athlete_detail_screen.dart';
-import 'athlete_list_screen.dart';
-import 'calendar_screen.dart';
-import 'calculators_page.dart';
 import 'chat_screen.dart';
 import 'training_log_screen.dart';
 
@@ -30,8 +23,8 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen>
-    with SingleTickerProviderStateMixin {
+class _MainScreenState extends State<MainScreen> {
+  final GlobalKey<ScaffoldState> _shellKey = GlobalKey<ScaffoldState>();
   int _currentIndex = 0;
 
   @override
@@ -58,8 +51,10 @@ class _MainScreenState extends State<MainScreen>
             ),
           );
         } else {
-          setState(() => _currentIndex = 2);
+          setState(() => _currentIndex = MainTab.tools.index);
         }
+      } else if (pending == 'shortcut_calendar') {
+        setState(() => _currentIndex = MainTab.calendar.index);
       }
       if (!mounted) return;
       unawaited(PushNotificationService().refreshBadgeFromApi());
@@ -68,351 +63,11 @@ class _MainScreenState extends State<MainScreen>
     });
   }
 
-  final List<Widget> _pages = [
-    const DashboardPage(),
-    const AthleteListScreen(),
-    const CalculatorsPage(),
-    const CalendarScreen(),
-    const AnnouncementPage(),
-  ];
-
-  final List<_NavItem> _navItems = const [
-    _NavItem(
-      icon: Icons.home_outlined,
-      selectedIcon: Icons.home_rounded,
-      label: 'Start',
-    ),
-    _NavItem(
-      icon: Icons.fitness_center_outlined,
-      selectedIcon: Icons.fitness_center,
-      label: 'Zawodnicy',
-    ),
-    _NavItem(
-      icon: Icons.calculate_outlined,
-      selectedIcon: Icons.calculate,
-      label: 'Narzędzia',
-    ),
-    _NavItem(
-      icon: Icons.calendar_month_outlined,
-      selectedIcon: Icons.calendar_month,
-      label: 'Moje starty',
-    ),
-    _NavItem(
-      icon: Icons.campaign_outlined,
-      selectedIcon: Icons.campaign,
-      label: 'Ogłoszenia',
-    ),
-  ];
-
-  Future<void> _openMoreMenu(BuildContext context) async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final cs = Theme.of(context).colorScheme;
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: cs.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(SlaviaUi.radiusXl),
-        ),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: SingleChildScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'CKS Slavia',
-                      style: GoogleFonts.outfit(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    Text(
-                      'Skróty w stylu strony klubu',
-                      style: GoogleFonts.outfit(
-                        fontSize: 13,
-                        color: cs.onSurface.withValues(alpha: 0.55),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (AppBrand.hasPublicSite)
-                ListTile(
-                  leading: Icon(Icons.public_rounded, color: cs.primary),
-                  title: Text(
-                    'Strona klubu',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    AppBrand.publicSiteLabel,
-                    style: GoogleFonts.outfit(fontSize: 12),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    final ok = await AppBrand.openPublicSite();
-                    if (context.mounted && !ok) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Nie udało się otworzyć strony.',
-                            style: GoogleFonts.outfit(),
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                )
-              else
-                ListTile(
-                  leading: Icon(Icons.public_rounded, color: cs.outline),
-                  title: Text(
-                    'Strona klubu',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    'Ustaw przy buildzie: --dart-define=SLAVIA_WEB_URL=https://…',
-                    style: GoogleFonts.outfit(
-                      fontSize: 11,
-                      color: cs.onSurface.withValues(alpha: 0.55),
-                    ),
-                  ),
-                ),
-              if (AppBrand.hasPublicSite) ...[
-                ListTile(
-                  leading: Icon(Icons.article_outlined, color: cs.primary),
-                  title: Text(
-                    'Aktualności',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    'Blog klubu na stronie WWW',
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: cs.onSurface.withValues(alpha: 0.55),
-                    ),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    final ok = await AppBrand.openClubPath('/aktualnosci');
-                    if (context.mounted && !ok) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Nie udało się otworzyć aktualności.',
-                            style: GoogleFonts.outfit(),
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                ),
-                ListTile(
-                  leading:
-                      Icon(Icons.photo_library_outlined, color: cs.tertiary),
-                  title: Text(
-                    'Galeria',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    'Zdjęcia z treningów i zawodów',
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: cs.onSurface.withValues(alpha: 0.55),
-                    ),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    final ok = await AppBrand.openClubPath('/galeria');
-                    if (context.mounted && !ok) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Nie udało się otworzyć galerii.',
-                            style: GoogleFonts.outfit(),
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                ),
-                ListTile(
-                  leading:
-                      Icon(Icons.event_note_rounded, color: cs.primary),
-                  title: Text(
-                    'Kalendarz klubu',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    'Wydarzenia publiczne na WWW',
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: cs.onSurface.withValues(alpha: 0.55),
-                    ),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    final ok = await AppBrand.openClubPath('/kalendarz');
-                    if (context.mounted && !ok) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Nie udało się otworzyć kalendarza.',
-                            style: GoogleFonts.outfit(),
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                ),
-              ],
-              ListTile(
-                leading: Icon(
-                  Icons.chat_bubble_outline_rounded,
-                  color: cs.secondary,
-                ),
-                title: Text(
-                  'Czat trener–zawodnik',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                ),
-                subtitle: Text(
-                  'Wiadomości 1:1',
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    color: cs.onSurface.withValues(alpha: 0.55),
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(builder: (_) => const ChatScreen()),
-                  );
-                },
-              ),
-              if (auth.user?.athleteId != null &&
-                  auth.user!.athleteId!.isNotEmpty)
-                ListTile(
-                  leading: Icon(Icons.insights_rounded, color: cs.secondary),
-                  title: Text(
-                    'Moje wykresy i statystyki',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    'Pełna analityka jak na WWW',
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: cs.onSurface.withValues(alpha: 0.55),
-                    ),
-                  ),
-                  onTap: () {
-                    final id = auth.user!.athleteId!;
-                    Navigator.pop(ctx);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute<void>(
-                        builder: (_) => AthleteDetailScreen(
-                          athleteId: id,
-                          title: 'Mój profil',
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ListTile(
-                leading: Icon(Icons.emoji_events_outlined, color: cs.tertiary),
-                title: Text(
-                  'Zawodnicy i wyniki',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                ),
-                subtitle: Text(
-                  'Lista kadry',
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    color: cs.onSurface.withValues(alpha: 0.55),
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  setState(() => _currentIndex = 1);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.calculate_outlined, color: cs.secondary),
-                title: Text(
-                  'Kalkulatory i narzędzia',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  setState(() => _currentIndex = 2);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.calendar_month_outlined, color: cs.primary),
-                title: Text(
-                  'Moje starty',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  setState(() => _currentIndex = 3);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.campaign_outlined, color: cs.primary),
-                title: Text(
-                  'Ogłoszenia',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  setState(() => _currentIndex = 4);
-                },
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: Icon(
-                  Icons.person_outline_rounded,
-                  color: cs.onSurface.withValues(alpha: 0.75),
-                ),
-                title: Text(
-                  'Profil i motyw',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => const ProfilePage(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final primary = Theme.of(context).colorScheme.primary;
+    final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = auth.user;
     final profileImg = user?.avatarUrl ?? user?.athleteImageUrl;
@@ -425,6 +80,11 @@ class _MainScreenState extends State<MainScreen>
     );
 
     return Scaffold(
+      key: _shellKey,
+      drawer: SlaviaAppDrawer(
+        selectedTab: MainTab.values[_currentIndex],
+        onSelectTab: (t) => setState(() => _currentIndex = t.index),
+      ),
       extendBodyBehindAppBar: false,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(64),
@@ -433,34 +93,27 @@ class _MainScreenState extends State<MainScreen>
             color: Theme.of(context).scaffoldBackgroundColor,
             border: Border(
               bottom: BorderSide(
-                color: Theme.of(
-                  context,
-                ).colorScheme.outlineVariant.withValues(alpha: 0.15),
+                color: cs.outlineVariant.withValues(alpha: 0.15),
               ),
             ),
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: [
                   IconButton(
-                    tooltip: 'Więcej',
+                    tooltip: 'Menu',
                     style: IconButton.styleFrom(
-                      backgroundColor: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.06),
+                      backgroundColor: cs.onSurface.withValues(alpha: 0.06),
                     ),
-                    onPressed: () => _openMoreMenu(context),
+                    onPressed: () => _shellKey.currentState?.openDrawer(),
                     icon: Icon(
                       Icons.menu_rounded,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.88),
+                      color: cs.onSurface.withValues(alpha: 0.88),
                     ),
                   ),
                   const SizedBox(width: 4),
-                  // Logo + title
                   Container(
                     width: 36,
                     height: 36,
@@ -484,18 +137,35 @@ class _MainScreenState extends State<MainScreen>
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Text(
-                    'CKS Slavia',
-                    style: GoogleFonts.outfit(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'CKS Slavia',
+                          style: GoogleFonts.outfit(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          MainTab.values[_currentIndex].label,
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: cs.onSurface.withValues(alpha: 0.5),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
                   ),
-                  const Spacer(),
                   _AppBarIconBtn(
                     icon: Icons.chat_bubble_outline_rounded,
-                    onTap: () => Navigator.push(
+                    onTap: () => Navigator.push<void>(
                       context,
                       MaterialPageRoute<void>(
                         builder: (_) => const ChatScreen(),
@@ -503,22 +173,22 @@ class _MainScreenState extends State<MainScreen>
                     ),
                   ),
                   const SizedBox(width: 2),
-                  // Notifications
                   _AppBarIconBtn(
                     icon: Icons.notifications_outlined,
-                    onTap: () => Navigator.push(
+                    onTap: () => Navigator.push<void>(
                       context,
-                      MaterialPageRoute(
+                      MaterialPageRoute<void>(
                         builder: (_) => const NotificationScreen(),
                       ),
                     ),
                   ),
                   const SizedBox(width: 4),
-                  // Avatar / profile
                   GestureDetector(
-                    onTap: () => Navigator.push(
+                    onTap: () => Navigator.push<void>(
                       context,
-                      MaterialPageRoute(builder: (_) => const ProfilePage()),
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ProfilePage(),
+                      ),
                     ),
                     child: Container(
                       width: 36,
@@ -569,122 +239,43 @@ class _MainScreenState extends State<MainScreen>
                 maxWidth: constraints.maxWidth,
                 maxHeight: constraints.maxHeight,
               ),
-              child: PageTransitionSwitcher(
-                duration: const Duration(milliseconds: 350),
-                transitionBuilder:
-                    (child, primaryAnimation, secondaryAnimation) {
-                  return FadeThroughTransition(
-                    animation: primaryAnimation,
-                    secondaryAnimation: secondaryAnimation,
-                    child: child,
-                  );
-                },
-                child: _pages[_currentIndex],
+              child: IndexedStack(
+                index: _currentIndex,
+                sizing: StackFit.expand,
+                children: [
+                  for (final t in MainTab.values) t.page,
+                ],
               ),
             ),
           );
         },
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          border: Border(
-            top: BorderSide(
-              color: Theme.of(
-                context,
-              ).colorScheme.outlineVariant.withValues(alpha: 0.15),
-            ),
-          ),
+      bottomNavigationBar: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          indicatorColor: primary.withValues(alpha: 0.14),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            final bold = states.contains(WidgetState.selected);
+            return GoogleFonts.outfit(
+              fontSize: 12,
+              fontWeight: bold ? FontWeight.w800 : FontWeight.w500,
+            );
+          }),
         ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(_navItems.length, (i) {
-                final item = _navItems[i];
-                final isSelected = i == _currentIndex;
-                return _NavButton(
-                  item: item,
-                  isSelected: isSelected,
-                  primary: primary,
-                  onTap: () => setState(() => _currentIndex = i),
-                );
-              }),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem {
-  final IconData icon;
-  final IconData selectedIcon;
-  final String label;
-  const _NavItem({
-    required this.icon,
-    required this.selectedIcon,
-    required this.label,
-  });
-}
-
-class _NavButton extends StatelessWidget {
-  final _NavItem item;
-  final bool isSelected;
-  final Color primary;
-  final VoidCallback onTap;
-
-  const _NavButton({
-    required this.item,
-    required this.isSelected,
-    required this.primary,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: isSelected
-            ? BoxDecoration(
-                color: primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(14),
-              )
-            : null,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: Icon(
-                isSelected ? item.selectedIcon : item.icon,
-                key: ValueKey(isSelected),
-                color: isSelected
-                    ? primary
-                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                size: 24,
+        child: NavigationBar(
+          selectedIndex: _currentIndex,
+          height: 72,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          onDestinationSelected: (i) {
+            HapticFeedback.selectionClick();
+            setState(() => _currentIndex = i);
+          },
+          destinations: [
+            for (final t in MainTab.values)
+              NavigationDestination(
+                icon: Icon(t.icon),
+                selectedIcon: Icon(t.selectedIcon),
+                label: t.label,
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              item.label,
-              style: GoogleFonts.outfit(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected
-                    ? primary
-                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-            ),
           ],
         ),
       ),
@@ -699,19 +290,21 @@ class _AppBarIconBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.onSurface.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Icon(
+            icon,
+            size: 20,
+            color: cs.onSurface.withValues(alpha: 0.8),
+          ),
         ),
       ),
     );
