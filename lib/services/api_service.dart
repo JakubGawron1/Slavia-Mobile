@@ -19,6 +19,7 @@ import '../models/club_post.dart';
 import '../models/gallery_photo.dart';
 import '../models/payment.dart';
 import '../config/api_base.dart';
+import 'public_api_cache.dart';
 
 class ApiService {
   static String get baseUrl => ApiBase.normalized;
@@ -47,6 +48,26 @@ class ApiService {
       headers['Authorization'] = 'Bearer $token';
     }
     return headers;
+  }
+
+  /// Publiczny GET z krótkim TTL w pamięci (zgodny z Cache-Control API).
+  Future<http.Response> _getCachedPublic(
+    String path, {
+    Duration ttl = const Duration(minutes: 2),
+  }) async {
+    final key = PublicApiCache.keyFor(path);
+    final cached = PublicApiCache.instance.get<String>(key);
+    if (cached != null) {
+      return http.Response(cached, 200);
+    }
+    final response = await http.get(
+      Uri.parse('$baseUrl$path'),
+      headers: _headers(null),
+    );
+    if (response.statusCode == 200) {
+      PublicApiCache.instance.set(key, response.body, ttl: ttl);
+    }
+    return response;
   }
 
   // Auth
@@ -82,11 +103,7 @@ class ApiService {
 
   // Athletes
   Future<List<Athlete>> getAthletes() async {
-    final token = await getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/athletes'),
-      headers: _headers(token),
-    );
+    final response = await _getCachedPublic('/api/athletes');
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -294,11 +311,7 @@ class ApiService {
 
   // Announcements
   Future<List<Announcement>> getAnnouncements() async {
-    final token = await getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/announcements'),
-      headers: _headers(token),
-    );
+    final response = await _getCachedPublic('/api/announcements');
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -345,6 +358,7 @@ class ApiService {
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
+      PublicApiCache.instance.invalidate('/api/announcements');
       return Announcement.fromJson(
         jsonDecode(response.body) as Map<String, dynamic>,
       );
@@ -392,15 +406,12 @@ class ApiService {
     if (response.statusCode != 200 && response.statusCode != 204) {
       throw Exception('delete_announcement_failed');
     }
+    PublicApiCache.instance.invalidate('/api/announcements');
   }
 
   /// Wpisy aktualności z WWW (`/aktualnosci`) — publiczna lista z API.
   Future<List<ClubPost>> getClubPosts() async {
-    final token = await getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/posts'),
-      headers: _headers(token),
-    );
+    final response = await _getCachedPublic('/api/posts');
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as List<dynamic>;
       return data
@@ -424,11 +435,7 @@ class ApiService {
 
   /// Galeria klubu — opublikowane media.
   Future<List<GalleryPhoto>> getGalleryPhotos() async {
-    final token = await getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/gallery'),
-      headers: _headers(token),
-    );
+    final response = await _getCachedPublic('/api/gallery', ttl: const Duration(minutes: 5));
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as List<dynamic>;
       return data
