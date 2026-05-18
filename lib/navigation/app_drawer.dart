@@ -6,6 +6,7 @@ import '../config/app_brand.dart';
 import '../main.dart';
 import '../ui/slavia_ui.dart';
 import '../screens/athlete_detail_screen.dart';
+import '../screens/barbell_analysis_screen.dart';
 import '../screens/chat_screen.dart';
 import '../screens/profile_page.dart';
 import '../screens/recovery_journal_screen.dart';
@@ -233,6 +234,21 @@ class SlaviaAppDrawer extends StatelessWidget {
                   accent: primary,
                   icon: Icons.person_search_rounded,
                 ),
+              ),
+              ListTile(
+                leading: Icon(Icons.show_chart_rounded, color: Colors.deepOrange),
+                title: Text('Analiza sztangi', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+                subtitle: Text(
+                  'Tor ruchu i technika',
+                  style: GoogleFonts.outfit(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.55)),
+                ),
+                onTap: () {
+                  _popDrawerThen(context, (nav) {
+                    nav.push<void>(
+                      MaterialPageRoute<void>(builder: (_) => const BarbellAnalysisScreen()),
+                    );
+                  });
+                },
               ),
               ListTile(
                 leading: Icon(Icons.qr_code_scanner_rounded, color: cs.primary),

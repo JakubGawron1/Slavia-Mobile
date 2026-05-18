@@ -213,6 +213,131 @@ abstract final class SlaviaUi {
   }
 
   /// Karta KPI na dashboardzie — obramowanie z lekkim „światłem” akcentu.
+  static const double minTouchTarget = 48;
+
+  /// Duży przycisk akcji (min. 48 dp wysokości).
+  static Widget primaryButton(
+    BuildContext context, {
+    required String label,
+    IconData? icon,
+    VoidCallback? onPressed,
+    bool filled = true,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final child = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (icon != null) ...[
+          Icon(icon, size: 22, color: filled ? cs.onPrimary : cs.primary),
+          const SizedBox(width: 8),
+        ],
+        Text(
+          label,
+          style: GoogleFonts.outfit(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: filled ? cs.onPrimary : cs.primary,
+          ),
+        ),
+      ],
+    );
+    return SizedBox(
+      width: double.infinity,
+      height: minTouchTarget,
+      child: filled
+          ? FilledButton(
+              onPressed: onPressed,
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(radiusMd),
+                ),
+              ),
+              child: child,
+            )
+          : OutlinedButton(
+              onPressed: onPressed,
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: cs.primary.withValues(alpha: 0.5)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(radiusMd),
+                ),
+              ),
+              child: child,
+            ),
+    );
+  }
+
+  /// Kafelek menu hubu — duży obszar dotyku, spójna karta.
+  static Widget hubTile(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color accent,
+    required VoidCallback onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.surface,
+      borderRadius: BorderRadius.circular(radiusLg),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(radiusLg),
+        child: Ink(
+          decoration: cardShell(context, borderTint: accent, radius: radiusLg),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: minTouchTarget + 20),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(radiusSm),
+                    ),
+                    child: Icon(icon, color: accent, size: 26),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: GoogleFonts.outfit(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: cs.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            height: 1.3,
+                            color: cs.onSurface.withValues(alpha: 0.58),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: cs.onSurface.withValues(alpha: 0.35),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   static BoxDecoration statCardDecoration(BuildContext context, Color accent) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;

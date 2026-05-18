@@ -44,4 +44,19 @@ abstract final class AppBrand {
     if (u == null) return false;
     return launchUrl(u, mode: LaunchMode.externalApplication);
   }
+
+  /// Analiza toru sztangi (MoveNet w przeglądarce) — ścieżka zależna od roli.
+  static String barbellAnalysisPath(List<String> roles) {
+    final isStaff = roles.any(
+      (r) => r == 'Trainer' || r == 'Admin' || r == 'SuperAdmin',
+    );
+    if (isStaff && !roles.contains('Athlete')) {
+      return '/trainer/analiza-sztangi';
+    }
+    return '/athlete/analiza-sztangi';
+  }
+
+  static Future<bool> openBarbellAnalysis(List<String> roles) async {
+    return openClubPath(barbellAnalysisPath(roles));
+  }
 }

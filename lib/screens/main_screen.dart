@@ -56,10 +56,10 @@ class _MainScreenState extends State<MainScreen> {
             ),
           );
         } else {
-          setState(() => _currentIndex = MainTab.tools.index);
+          setState(() => _currentIndex = MainTab.training.index);
         }
       } else if (pending == 'shortcut_calendar') {
-        setState(() => _currentIndex = MainTab.calendar.index);
+        setState(() => _currentIndex = MainTab.training.index);
       }
       if (!mounted) return;
       unawaited(PushNotificationService().refreshBadgeFromApi());

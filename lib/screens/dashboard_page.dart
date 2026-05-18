@@ -25,6 +25,7 @@ import '../utils/html_plain_text.dart';
 import 'club_posts_screen.dart';
 import 'club_post_detail_screen.dart';
 import 'club_gallery_screen.dart';
+import 'barbell_analysis_screen.dart';
 
 String _primaryRoleLabel(List<String> roles) {
   if (roles.contains('SuperAdmin')) return 'SuperAdmin';
@@ -510,6 +511,15 @@ class _QuickAccessRow extends StatelessWidget {
           Icons.book_outlined,
           Colors.teal,
           () => push(const TrainingLogScreen()),
+        ),
+      );
+      tiles.add(
+        _quickTile(
+          context,
+          'Sztanga',
+          Icons.show_chart_rounded,
+          Colors.deepOrange,
+          () => push(const BarbellAnalysisScreen()),
         ),
       );
       tiles.add(
