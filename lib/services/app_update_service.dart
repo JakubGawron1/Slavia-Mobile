@@ -436,37 +436,7 @@ class AppUpdateService {
       if (!context.mounted) return;
 
       if (Platform.isAndroid) {
-        try {
-          await _installChannel.invokeMethod<bool>('install', <String, dynamic>{
-            'path': path,
-          });
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Otwarto instalator systemu. Dokończ instalację na ekranie Androida. '
-                  'Komunikat „aplikacja nie została zainstalowana” zwykle oznacza anulowanie, '
-                  'ten sam numer build co obecna wersja lub inny podpis APK (debug vs release).',
-                ),
-                duration: Duration(seconds: 8),
-              ),
-            );
-          }
-        } on PlatformException catch (e) {
-          final OpenResult openResult = await OpenFilex.open(
-            path,
-            type: 'application/vnd.android.package-archive',
-          );
-          if (openResult.type != ResultType.done && context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  '${e.message ?? e.code}; otwarcie pliku: ${openResult.message}',
-                ),
-              ),
-            );
-          }
-        }
+        await _installApkOnAndroid(context, path);
       } else {
         final OpenResult openResult = await OpenFilex.open(path);
         if (openResult.type != ResultType.done && context.mounted) {
@@ -505,5 +475,208 @@ class AppUpdateService {
     } finally {
       client.close();
     }
+  }
+
+  String? _installStatusFromResult(dynamic raw) {
+    if (raw is Map) {
+      return raw['status'] as String?;
+    }
+    if (raw == true) return 'success';
+    return null;
+  }
+
+  String _installFailureReason({String? status, PlatformException? error}) {
+    if (error != null) {
+      return error.message ?? error.code;
+    }
+    switch (status) {
+      case 'cancelled':
+        return 'anulowano instalację w systemie';
+      case 'failed':
+        return 'instalator zgłosił błąd (np. konflikt podpisu lub ten sam build)';
+      default:
+        return 'instalacja nie powiodła się';
+    }
+  }
+
+  Future<void> _installApkOnAndroid(BuildContext context, String path) async {
+    String? status;
+    try {
+      final dynamic raw = await _installChannel.invokeMethod<dynamic>(
+        'install',
+        <String, dynamic>{'path': path},
+      );
+      status = _installStatusFromResult(raw);
+      if (status == 'success') {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Aktualizacja zainstalowana. Możesz uruchomić aplikację ponownie.'),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+        return;
+      }
+    } on PlatformException catch (e) {
+      if (!context.mounted) return;
+      final opened = await _openApkWithOpenFilex(context, path, e);
+      if (opened || !context.mounted) return;
+      await _offerUpdateFallback(context, path, platformError: e);
+      return;
+    }
+
+    if (!context.mounted) return;
+
+    await _offerUpdateFallback(context, path, status: status);
+  }
+
+  Future<bool> _openApkWithOpenFilex(
+    BuildContext context,
+    String path, [
+    PlatformException? priorError,
+  ]) async {
+    final OpenResult openResult = await OpenFilex.open(
+      path,
+      type: 'application/vnd.android.package-archive',
+    );
+    if (openResult.type == ResultType.done) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Otwarto instalator systemu. Dokończ instalację na ekranie Androida.',
+            ),
+            duration: Duration(seconds: 6),
+          ),
+        );
+      }
+      return true;
+    }
+    if (context.mounted && priorError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${priorError.message ?? priorError.code}; otwarcie pliku: ${openResult.message}',
+          ),
+        ),
+      );
+    }
+    return false;
+  }
+
+  Future<void> _offerUpdateFallback(
+    BuildContext context,
+    String apkPath, {
+    String? status,
+    PlatformException? platformError,
+  }) async {
+    final reason = _installFailureReason(status: status, error: platformError);
+    final proceed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dlgCtx) => AlertDialog(
+        title: const Text('Instalacja nie powiodła się'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Powód: $reason.'),
+              const SizedBox(height: 12),
+              const Text(
+                'Możemy spróbować aktualizacji przez odinstalowanie obecnej wersji '
+                'i ponowną instalację pobranego APK.\n\n'
+                'Android wymaga Twojego potwierdzenia odinstalowania — aplikacja nie może '
+                'usunąć się sama bez Twojej zgody (Android 12 i nowsze).\n\n'
+                'Plik aktualizacji zostanie też skopiowany do folderu Pobrane jako '
+                'slavia_update.apk — jeśli aplikacja się zamknie po odinstalowaniu, '
+                'otwórz ten plik ręcznie i zainstaluj ponownie.',
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dlgCtx, false),
+            child: const Text('Anuluj'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dlgCtx, true),
+            child: const Text('Odinstaluj i zainstaluj'),
+          ),
+        ],
+      ),
+    );
+    if (proceed != true || !context.mounted) return;
+
+    try {
+      final dynamic raw = await _installChannel.invokeMethod<dynamic>(
+        'runUpdateFallback',
+        <String, dynamic>{'path': apkPath},
+      );
+      if (!context.mounted) return;
+      _showFallbackResultSnackBar(context, raw);
+    } on PlatformException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Nie udało się uruchomić procedury zapasowej: ${e.message ?? e.code}',
+            ),
+            duration: const Duration(seconds: 8),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showFallbackResultSnackBar(BuildContext context, dynamic raw) {
+    if (raw is! Map) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Uruchomiono procedurę zapasową aktualizacji.'),
+        ),
+      );
+      return;
+    }
+
+    final stillInstalled = raw['stillInstalled'] == true;
+    final installLaunched = raw['installLaunched'] == true;
+    final downloadCopied = raw['downloadCopied'] == true;
+    final uninstall = raw['uninstall'] as String? ?? '';
+    final installError = raw['installError'] as String?;
+    final fileName =
+        raw['downloadFileName'] as String? ?? 'slavia_update.apk';
+
+    final buffer = StringBuffer();
+    if (uninstall == 'cancelled') {
+      buffer.write('Odinstalowanie anulowano. ');
+    } else if (!stillInstalled) {
+      buffer.write(
+        'Aplikacja została odinstalowana. ',
+      );
+    } else {
+      buffer.write('Aplikacja nadal jest zainstalowana. ');
+    }
+
+    if (installLaunched) {
+      buffer.write('Otwarto ponownie instalator systemu.');
+    } else if (installError != null && installError.isNotEmpty) {
+      buffer.write('Nie udało się otworzyć instalatora: $installError. ');
+    }
+
+    if (downloadCopied) {
+      buffer.write(
+        ' Kopia APK w Pobranych: $fileName — użyj jej, jeśli instalator się nie otworzy.',
+      );
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(buffer.toString().trim()),
+        duration: const Duration(seconds: 10),
+      ),
+    );
   }
 }
