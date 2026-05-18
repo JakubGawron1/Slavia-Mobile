@@ -1,5 +1,20 @@
 # Changelog — Slavia Mobile
 
+## [0.9.6+7] — 2026-05-18 (tag `v0.9.6-dev`)
+
+### Nowe funkcje
+- **Analiza sztangi (MVP)** — wstępna ocena techniki podnoszenia na podstawie wideo/klatek.
+- **Nawigacja** — przeprojektowany dolny pasek na **4 zakładki** (`NavigationBar` + `IndexedStack`).
+
+### Ulepszenia
+- **Aktualizator APK** — fallback przy nieudanej instalacji (ponowna próba / alternatywna ścieżka otwarcia instalatora).
+- **Wydania GitHub** — obsługa **prerelease** przy sprawdzaniu aktualizacji; czytelniejsze komunikaty po sync z API.
+
+### Instalacja
+Pobierz APK z [GitHub Releases](https://github.com/JakubGawron1/Slavia-Mobile/releases) (tag `v0.9.6-dev`) lub zsynchronizuj wydanie w panelu admina witryny.
+
+---
+
 ## [0.9.5+6] — 2026-05-18 (tag `v0.9.5-dev`)
 
 ### Nowe funkcje
