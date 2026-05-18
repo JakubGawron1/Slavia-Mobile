@@ -81,22 +81,22 @@ bool isRemoteVersionNewer(String remoteTag, String currentVersion) {
   return false;
 }
 
-Future<GithubLatestRelease?> fetchLatestGithubRelease() async {
-  final r = MobileGithubRelease.repo.trim();
-  if (!MobileGithubRelease.isConfigured) return null;
-  final uri = Uri.parse('https://api.github.com/repos/$r/releases/latest');
-  final res = await http
-      .get(
-        uri,
-        headers: const {
-          'Accept': 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-          'User-Agent': 'Slavia-Mobile-UpdateCheck',
-        },
-      )
-      .timeout(const Duration(seconds: 20));
-  if (res.statusCode != 200) return null;
-  final map = jsonDecode(res.body) as Map<String, dynamic>;
+Map<String, String> _githubReleaseHeaders() {
+  const headers = <String, String>{
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'Slavia-Mobile-UpdateCheck',
+  };
+  const token = String.fromEnvironment('GITHUB_TOKEN', defaultValue: '');
+  if (token.trim().isNotEmpty) {
+    return {...headers, 'Authorization': 'Bearer ${token.trim()}'};
+  }
+  return headers;
+}
+
+GithubLatestRelease? _releaseFromJsonMap(Map<String, dynamic> map) {
+  final tag = (map['tag_name'] as String? ?? '').trim();
+  if (tag.isEmpty) return null;
   final assets = (map['assets'] as List<dynamic>?) ?? [];
   String? apkUrl;
   for (final a in assets) {
@@ -108,12 +108,51 @@ Future<GithubLatestRelease?> fetchLatestGithubRelease() async {
     }
   }
   return GithubLatestRelease(
-    tagName: map['tag_name'] as String? ?? '',
+    tagName: tag,
     name: map['name'] as String? ?? '',
     htmlUrl: map['html_url'] as String? ?? '',
     apkUrl: apkUrl,
     body: map['body'] as String?,
   );
+}
+
+/// `/releases/latest` pomija prerelease (np. `v0.9.5-dev`) — wtedy bierzemy pierwszy z listy.
+Future<GithubLatestRelease?> fetchLatestGithubRelease() async {
+  final r = MobileGithubRelease.repo.trim();
+  if (!MobileGithubRelease.isConfigured) return null;
+  final headers = _githubReleaseHeaders();
+  final client = http.Client();
+  try {
+    final latestUri = Uri.parse('https://api.github.com/repos/$r/releases/latest');
+    final latestRes = await client
+        .get(latestUri, headers: headers)
+        .timeout(const Duration(seconds: 20));
+    if (latestRes.statusCode == 200) {
+      final map = jsonDecode(latestRes.body) as Map<String, dynamic>;
+      return _releaseFromJsonMap(map);
+    }
+    if (latestRes.statusCode != 404) {
+      return null;
+    }
+
+    final listUri = Uri.parse(
+      'https://api.github.com/repos/$r/releases?per_page=30',
+    );
+    final listRes = await client
+        .get(listUri, headers: headers)
+        .timeout(const Duration(seconds: 20));
+    if (listRes.statusCode != 200) return null;
+    final list = jsonDecode(listRes.body) as List<dynamic>;
+    for (final item in list) {
+      if (item is Map<String, dynamic>) {
+        final rel = _releaseFromJsonMap(item);
+        if (rel != null) return rel;
+      }
+    }
+    return null;
+  } finally {
+    client.close();
+  }
 }
 
 const _kDismissedTagKey = 'app_update_dismissed_tag';
@@ -155,7 +194,8 @@ class AppUpdateService {
       }
       if (rel == null || rel.tagName.isEmpty) {
         if (ignoreDismissed) {
-          return 'Brak danych o wydaniu (GitHub zwrócił błąd lub pustą odpowiedź).';
+          return 'Nie udało się odczytać wydań z GitHub (sieć, limit API lub brak uprawnień). '
+              'Spróbuj za chwilę — jeśli masz najnowszą wersję z klubu, możesz zignorować ten komunikat.';
         }
         return null;
       }
