@@ -187,10 +187,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   try {
                     final ok = await auth.authenticate(
                       localizedReason: 'Włącz ochronę biometryczną dla CKS Slavia',
-                      options: const AuthenticationOptions(
-                        stickyAuth: true,
-                        biometricOnly: false,
-                      ),
+                      persistAcrossBackgrounding: true,
+                      biometricOnly: false,
                     );
                     if (!ok) {
                       if (!context.mounted) return;

@@ -11,6 +11,7 @@ import '../screens/profile_page.dart';
 import '../screens/recovery_journal_screen.dart';
 import '../screens/athlete_achievements_screen.dart';
 import '../screens/athlete_timeline_screen.dart';
+import '../screens/attendance_qr_scan_screen.dart';
 import '../screens/club_posts_screen.dart';
 import '../screens/club_gallery_screen.dart';
 import 'main_tab.dart';
@@ -232,6 +233,21 @@ class SlaviaAppDrawer extends StatelessWidget {
                   accent: primary,
                   icon: Icons.person_search_rounded,
                 ),
+              ),
+              ListTile(
+                leading: Icon(Icons.qr_code_scanner_rounded, color: cs.primary),
+                title: Text('Skaner obecności', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+                subtitle: Text(
+                  'Zeskanuj kod QR w sali',
+                  style: GoogleFonts.outfit(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.55)),
+                ),
+                onTap: () {
+                  _popDrawerThen(context, (nav) {
+                    nav.push<void>(
+                      MaterialPageRoute<void>(builder: (_) => const AttendanceQrScanScreen()),
+                    );
+                  });
+                },
               ),
               ListTile(
                 leading: Icon(Icons.insights_rounded, color: cs.secondary),

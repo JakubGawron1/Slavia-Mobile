@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/secure_credentials_store.dart';
 import '../main.dart';
 import '../ui/slavia_ui.dart';
 import '../utils/network_feedback.dart';
@@ -257,22 +258,21 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<bool> _shouldShowBiometric() async {
     final prefs = await SharedPreferences.getInstance();
     if (!(prefs.getBool(kBiometricUnlockPrefKey) ?? false)) return false;
-    final savedUser = prefs.getString('saved_username');
-    final savedPass = prefs.getString('saved_password');
-    return savedUser != null && savedPass != null;
+    final creds = await SecureCredentialsStore.instance.readLoginCredentials();
+    return creds.username != null && creds.password != null;
   }
 
   Future<void> _tryBiometricLogin(BuildContext context, AuthProvider auth) async {
     final la = LocalAuthentication();
     final ok = await la.authenticate(
       localizedReason: 'Zaloguj się do CKS Slavia',
-      options: const AuthenticationOptions(stickyAuth: true),
+      persistAcrossBackgrounding: true,
     );
     if (!ok) return;
 
-    final prefs = await SharedPreferences.getInstance();
-    final u = prefs.getString('saved_username');
-    final p = prefs.getString('saved_password');
+    final creds = await SecureCredentialsStore.instance.readLoginCredentials();
+    final u = creds.username;
+    final p = creds.password;
     if (u == null || p == null) return;
     if (!context.mounted) return;
 
@@ -287,10 +287,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final p = _passwordController.text;
     try {
       await auth.login(u, p);
-      // Save credentials for next biometric login
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('saved_username', u);
-      await prefs.setString('saved_password', p);
+      await SecureCredentialsStore.instance.writeLoginCredentials(u, p);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

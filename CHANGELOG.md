@@ -1,5 +1,28 @@
 # Changelog — Slavia Mobile
 
+## [0.9.5+6] — 2026-05-18 (tag `v0.9.5-dev`)
+
+### Nowe funkcje
+- **Obecność QR** — skaner w menu; zatwierdzona obecność po skanie kodu z sali (`/api/attendance/qr-checkin`).
+- **Czat** — status „Na żywo” rozmówcy, reakcje emoji (👍 ✅ 🔥 💪), ping presence co 60 s.
+- **Udostępnianie wyniku** — eksport karty PNG ze share sheet (`ResultShareService`) z osi czasu zawodnika.
+- **Powiadomienia** — osobne kanały Android: `slavia_club` / `slavia_chat` wg typu push.
+
+### Ulepszenia
+- **Sesja** — token i dane logowania w `flutter_secure_storage` (`SecureCredentialsStore`).
+- **Wydajność** — batch Sinclair w `compute()` (isolate); cache SWR (`PersistentApiCache`, `auth/me`).
+- **Aktualizator APK** — `versionCode` z liczby commitów + kodu z `pubspec`; lepsze komunikaty po instalatorze.
+- **Zależności** — `local_auth` 3, `flutter_timezone` 5, `share_plus`, `flutter_secure_storage`.
+
+### Naprawki
+- Instalacja APK z poziomu aplikacji (uprawnienia, URI, komunikat po powrocie z instalatora).
+- Biometria i strefa czasowa powiadomień po major upgrade pakietów.
+
+### Instalacja
+Pobierz APK z [GitHub Releases](https://github.com/JakubGawron1/Slavia-Mobile/releases) (tag `v0.9.5-dev`) lub zsynchronizuj wydanie w panelu admina witryny.
+
+---
+
 ## [0.9.1+2] — 2026-05-15
 
 ### Naprawki

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -9,7 +11,6 @@ import '../models/athlete.dart';
 import '../models/chat.dart';
 import '../services/api_service.dart';
 import '../ui/slavia_ui.dart';
-
 /// Czat trener–zawodnik 1:1 (jak `/chat` na WWW).
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -19,6 +20,8 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  static const _reactionEmojis = ['👍', '✅', '🔥', '💪'];
+
   List<ChatThread> _threads = [];
   List<ChatMessage> _messages = [];
   String? _activeThreadId;
@@ -28,6 +31,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _titleDraftCtrl = TextEditingController();
   final _newThreadTitleCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  Timer? _presenceTimer;
 
   bool _canStartThread(AuthUser? u) {
     final r = u?.roles ?? [];
@@ -38,10 +42,21 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     _loadThreads();
+    _startPresencePing();
+  }
+
+  void _startPresencePing() {
+    _presenceTimer?.cancel();
+    final api = Provider.of<ApiService>(context, listen: false);
+    unawaited(api.pingChatPresence().catchError((_) {}));
+    _presenceTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      unawaited(api.pingChatPresence().catchError((_) {}));
+    });
   }
 
   @override
   void dispose() {
+    _presenceTimer?.cancel();
     _draftCtrl.dispose();
     _titleDraftCtrl.dispose();
     _newThreadTitleCtrl.dispose();
@@ -112,6 +127,47 @@ class _ChatScreenState extends State<ChatScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Wiadomości: $e')));
+      }
+    }
+  }
+
+  ChatThread? get _activeThread {
+    final id = _activeThreadId;
+    if (id == null) return null;
+    for (final t in _threads) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
+
+  Future<void> _toggleReaction(ChatMessage m, String emoji) async {
+    final api = Provider.of<ApiService>(context, listen: false);
+    try {
+      final updated = await api.toggleChatReaction(m.id, emoji);
+      if (!mounted) return;
+      setState(() {
+        _messages = _messages
+            .map(
+              (msg) => msg.id == m.id
+                  ? ChatMessage(
+                      id: msg.id,
+                      threadId: msg.threadId,
+                      senderUserId: msg.senderUserId,
+                      body: msg.body,
+                      createdAt: msg.createdAt,
+                      senderUsername: msg.senderUsername,
+                      senderPhotoUrl: msg.senderPhotoUrl,
+                      reactions: updated,
+                    )
+                  : msg,
+            )
+            .toList();
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Reakcja: $e')));
       }
     }
   }
@@ -505,6 +561,41 @@ class _ChatScreenState extends State<ChatScreen> {
                               padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
                               child: Row(
                                 children: [
+                                  if (_activeThread?.peerOnline == true) ...[
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      margin: const EdgeInsets.only(right: 8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(999),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 7,
+                                            height: 7,
+                                            decoration: const BoxDecoration(
+                                              color: Colors.green,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Text(
+                                            'Na żywo',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.green.shade800,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                   Expanded(
                                     child: TextField(
                                       controller: _titleDraftCtrl,
@@ -616,7 +707,66 @@ class _ChatScreenState extends State<ChatScreen> {
                                                     height: 1.35,
                                                   ),
                                                 ),
+                                                if (m.reactions.isNotEmpty) ...[
+                                                  const SizedBox(height: 6),
+                                                  Wrap(
+                                                    spacing: 4,
+                                                    runSpacing: 4,
+                                                    children: [
+                                                      for (final r in m.reactions)
+                                                        ActionChip(
+                                                          visualDensity:
+                                                              VisualDensity.compact,
+                                                          label: Text(
+                                                            '${r.emoji} ${r.count}',
+                                                            style: GoogleFonts.outfit(
+                                                              fontSize: 11,
+                                                            ),
+                                                          ),
+                                                          backgroundColor: r.reactedByMe
+                                                              ? cs.primary.withValues(
+                                                                  alpha: 0.2,
+                                                                )
+                                                              : cs.surface,
+                                                          side: BorderSide(
+                                                            color: cs.outline.withValues(
+                                                              alpha: 0.25,
+                                                            ),
+                                                          ),
+                                                          onPressed: () =>
+                                                              _toggleReaction(
+                                                                m,
+                                                                r.emoji,
+                                                              ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ],
                                                 const SizedBox(height: 4),
+                                                Wrap(
+                                                  spacing: 2,
+                                                  children: [
+                                                    for (final em in _reactionEmojis)
+                                                      IconButton(
+                                                        visualDensity:
+                                                            VisualDensity.compact,
+                                                        padding: EdgeInsets.zero,
+                                                        constraints:
+                                                            const BoxConstraints(
+                                                          minWidth: 32,
+                                                          minHeight: 32,
+                                                        ),
+                                                        onPressed: () =>
+                                                            _toggleReaction(m, em),
+                                                        icon: Text(
+                                                          em,
+                                                          style: const TextStyle(
+                                                            fontSize: 16,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
                                                 Text(
                                                   _fmtTs(m.createdAt),
                                                   style: GoogleFonts.outfit(

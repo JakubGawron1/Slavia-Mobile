@@ -69,10 +69,8 @@ class _BiometricGateState extends State<BiometricGate>
     try {
       final ok = await auth.authenticate(
         localizedReason: 'Odblokuj aplikację CKS Slavia',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: false,
-        ),
+        persistAcrossBackgrounding: true,
+        biometricOnly: false,
       );
       if (!mounted) return;
       if (ok) {

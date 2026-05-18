@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/auth.dart';
 import '../models/athlete.dart';
 import '../models/notification.dart';
@@ -19,7 +18,11 @@ import '../models/club_post.dart';
 import '../models/gallery_photo.dart';
 import '../models/payment.dart';
 import '../config/api_base.dart';
+import 'dart:async';
+
+import 'persistent_api_cache.dart';
 import 'public_api_cache.dart';
+import 'secure_credentials_store.dart';
 
 class ApiService {
   static String get baseUrl => ApiBase.normalized;
@@ -27,19 +30,13 @@ class ApiService {
 
   Future<String?> getToken() async {
     if (_token != null) return _token;
-    final prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString('auth_token');
+    _token = await SecureCredentialsStore.instance.readToken();
     return _token;
   }
 
   Future<void> setToken(String? token) async {
     _token = token;
-    final prefs = await SharedPreferences.getInstance();
-    if (token == null) {
-      await prefs.remove('auth_token');
-    } else {
-      await prefs.setString('auth_token', token);
-    }
+    await SecureCredentialsStore.instance.writeToken(token);
   }
 
   Map<String, String> _headers(String? token) {
@@ -54,12 +51,30 @@ class ApiService {
   Future<http.Response> _getCachedPublic(
     String path, {
     Duration ttl = const Duration(minutes: 2),
+    bool backgroundRefresh = false,
   }) async {
     final key = PublicApiCache.keyFor(path);
-    final cached = PublicApiCache.instance.get<String>(key);
-    if (cached != null) {
-      return http.Response(cached, 200);
+    final mem = PublicApiCache.instance.get<String>(key);
+    if (mem != null) {
+      if (backgroundRefresh) {
+        unawaited(_refreshPublicGet(path, key, ttl));
+      }
+      return http.Response(mem, 200);
     }
+    final disk = await PublicApiCache.instance.getDisk<String>(key);
+    if (disk != null) {
+      PublicApiCache.instance.set(key, disk, ttl: ttl);
+      unawaited(_refreshPublicGet(path, key, ttl));
+      return http.Response(disk, 200);
+    }
+    return _refreshPublicGet(path, key, ttl);
+  }
+
+  Future<http.Response> _refreshPublicGet(
+    String path,
+    String key,
+    Duration ttl,
+  ) async {
     final response = await http.get(
       Uri.parse('$baseUrl$path'),
       headers: _headers(null),
@@ -68,6 +83,39 @@ class ApiService {
       PublicApiCache.instance.set(key, response.body, ttl: ttl);
     }
     return response;
+  }
+
+  static const _meCacheKey = 'auth_me';
+
+  Future<AuthUser?> getCachedMe() async {
+    final raw = await PersistentApiCache.instance.getJson(_meCacheKey);
+    if (raw is Map<String, dynamic>) {
+      return AuthUser.fromJson(raw);
+    }
+    return null;
+  }
+
+  Future<void> cacheMe(AuthUser user) async {
+    await PersistentApiCache.instance.setJson(
+      _meCacheKey,
+      {
+        'id': user.id,
+        'username': user.username,
+        'avatar_url': user.avatarUrl,
+        'roles': user.roles,
+        'is_banned': user.isBanned,
+        'banned_reason': user.bannedReason,
+        'totp_enabled': user.totpEnabled,
+        'athlete_id': user.athleteId,
+        'athlete_image_url': user.athleteImageUrl,
+        'email': user.email,
+        'ui_theme_preset': user.uiThemePreset,
+        'ui_color_mode': user.uiColorMode,
+        'athlete_gender': user.athleteGender,
+        'athlete_birth_year': user.athleteBirthYear,
+      },
+      maxAge: const Duration(days: 30),
+    );
   }
 
   // Auth
@@ -95,10 +143,31 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      return AuthUser.fromJson(jsonDecode(response.body));
+      final user = AuthUser.fromJson(jsonDecode(response.body));
+      await cacheMe(user);
+      return user;
     } else {
       throw Exception('Failed to get user data');
     }
+  }
+
+  Future<Map<String, dynamic>> qrCheckin({
+    required String payload,
+    required String sessionDate,
+  }) async {
+    final token = await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/attendance/qr-checkin'),
+      headers: _headers(token),
+      body: jsonEncode({
+        'payload': payload,
+        'session_date': sessionDate,
+      }),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception(response.body);
   }
 
   // Athletes
@@ -816,6 +885,35 @@ class ApiService {
           .toList();
     }
     throw Exception('Failed to load messages: ${response.statusCode}');
+  }
+
+  Future<void> pingChatPresence() async {
+    final token = await getToken();
+    await http.post(
+      Uri.parse('$baseUrl/api/chat/presence'),
+      headers: _headers(token),
+    );
+  }
+
+  Future<List<ChatReactionSummary>> toggleChatReaction(
+    String messageId,
+    String emoji,
+  ) async {
+    final token = await getToken();
+    final response = await http.post(
+      Uri.parse(
+        '$baseUrl/api/chat/messages/${Uri.encodeComponent(messageId)}/reactions',
+      ),
+      headers: _headers(token),
+      body: jsonEncode({'emoji': emoji}),
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data
+          .map((e) => ChatReactionSummary.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to toggle reaction: ${response.body}');
   }
 
   Future<void> sendChatMessage(String threadId, String body) async {

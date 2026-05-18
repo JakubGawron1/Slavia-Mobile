@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 
-/// Prosty cache w pamięci dla publicznych GET-ów (TTL). Zmniejsza ruch przy powrocie do ekranu.
+import 'persistent_api_cache.dart';
+
+/// Prosty cache w pamięci + dysk dla publicznych GET-ów (TTL). Zmniejsza ruch przy powrocie do ekranu.
 class PublicApiCache {
   PublicApiCache._();
   static final PublicApiCache instance = PublicApiCache._();
@@ -17,8 +20,20 @@ class PublicApiCache {
     return entry.value as T?;
   }
 
+  Future<T?> getDisk<T>(String key) async {
+    final raw = await PersistentApiCache.instance.getJson(key);
+    if (raw is T) return raw;
+    if (raw is String && T == String) return raw as T;
+    return null;
+  }
+
   void set<T>(String key, T value, {Duration ttl = const Duration(minutes: 3)}) {
     _store[key] = _CacheEntry(value, DateTime.now().add(ttl));
+    if (value is String) {
+      unawaited(
+        PersistentApiCache.instance.setJson(key, value, maxAge: const Duration(days: 7)),
+      );
+    }
   }
 
   void invalidate(String key) => _store.remove(key);

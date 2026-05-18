@@ -5,9 +5,9 @@ import 'package:timezone/timezone.dart' as tz;
 /// Inicjalizacja strefy dla `zonedSchedule` (przypomnienia o startach).
 Future<void> ensureLocalTimezoneInitialized() async {
   tz_data.initializeTimeZones();
-  final name = await FlutterTimezone.getLocalTimezone();
+  final tzInfo = await FlutterTimezone.getLocalTimezone();
   try {
-    tz.setLocalLocation(tz.getLocation(name));
+    tz.setLocalLocation(tz.getLocation(tzInfo.identifier));
   } catch (_) {
     tz.setLocalLocation(tz.getLocation('Europe/Warsaw'));
   }

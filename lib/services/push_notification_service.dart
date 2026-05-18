@@ -20,9 +20,22 @@ class PushNotificationService {
   /// Udostępnione np. do zaplanowanych przypomnień o startach (#148).
   FlutterLocalNotificationsPlugin get plugin => _plugin;
 
-  static const _channelId = 'slavia_club';
-  static const _channelName = 'CKS Slavia';
+  static const _channelClubId = 'slavia_club';
+  static const _channelClubName = 'Slavia: klub';
+  static const _channelChatId = 'slavia_chat';
+  static const _channelChatName = 'Slavia: czat';
   static const _prefKey = 'seen_notification_ids';
+
+  String _channelForKind(String kind) {
+    final k = kind.toLowerCase();
+    if (k.contains('chat')) return _channelChatId;
+    return _channelClubId;
+  }
+
+  String _channelNameForId(String id) {
+    if (id == _channelChatId) return _channelChatName;
+    return _channelClubName;
+  }
 
   Future<void> init(ApiService apiService) async {
     _apiService = apiService;
@@ -77,7 +90,12 @@ class PushNotificationService {
           .toList();
 
       for (final n in newOnes) {
-        await _showSystemNotification(n.id.hashCode, n.title, n.body);
+        await _showSystemNotification(
+          n.id.hashCode,
+          n.title,
+          n.body,
+          kind: n.kind,
+        );
         seen.add(n.id);
       }
 
@@ -93,29 +111,35 @@ class PushNotificationService {
   Future<void> _showSystemNotification(
     int id,
     String title,
-    String body,
-  ) async {
-    const androidDetails = AndroidNotificationDetails(
-      _channelId,
-      _channelName,
-      channelDescription: 'Powiadomienia klubowe CKS Slavia',
+    String body, {
+    String kind = 'info',
+  }) async {
+    final channelId = _channelForKind(kind);
+    final channelName = _channelNameForId(channelId);
+    final androidDetails = AndroidNotificationDetails(
+      channelId,
+      channelName,
+      channelDescription: channelId == _channelChatId
+          ? 'Wiadomości z czatu trener–zawodnik'
+          : 'Powiadomienia klubowe CKS Slavia',
       importance: Importance.high,
       priority: Priority.high,
       icon: '@mipmap/launcher_icon',
+      groupKey: channelId,
     );
 
     const iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      threadIdentifier: 'slavia_notifications',
     );
 
-    // v20 uses named parameters for show()
     await _plugin.show(
       id: id,
       title: title,
       body: body,
-      notificationDetails: const NotificationDetails(
+      notificationDetails: NotificationDetails(
         android: androidDetails,
         iOS: iosDetails,
       ),

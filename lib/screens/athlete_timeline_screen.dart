@@ -8,6 +8,7 @@ import '../models/athlete_timeline_item.dart';
 import '../services/api_service.dart';
 import '../ui/slavia_ui.dart';
 import '../utils/network_feedback.dart';
+import '../services/result_share_service.dart';
 
 /// Oś czasu zawodnika — ta sama logika co `/athlete/timeline` na WWW (API).
 class AthleteTimelineScreen extends StatefulWidget {
@@ -196,6 +197,23 @@ class _AthleteTimelineScreenState extends State<AthleteTimelineScreen> {
                                           fontSize: 15,
                                           height: 1.45,
                                         ),
+                                      ),
+                                    ],
+                                    if (it.kind == 'result') ...[
+                                      const SizedBox(height: 16),
+                                      FilledButton.icon(
+                                        onPressed: () async {
+                                          Navigator.pop(ctx);
+                                          await ResultShareService.instance.shareResultCard(
+                                            context: context,
+                                            athleteName: widget.subtitle ?? 'Zawodnik',
+                                            title: it.title,
+                                            detail: it.detail,
+                                            dateLabel: when,
+                                          );
+                                        },
+                                        icon: const Icon(Icons.ios_share_rounded),
+                                        label: const Text('Udostępnij jako grafikę'),
                                       ),
                                     ],
                                   ],

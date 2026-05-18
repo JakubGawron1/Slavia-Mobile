@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 #
 # Android: `android/app/build.gradle.kts` — versionName z tagu Git (exact / najnowszy v*), versionCode z `git rev-list --count`.
 # iOS / PackageInfo: domyślnie ta sama linia `version` (fallback gdy Gradle nie buduje).
-version: 0.9.3+4
+version: 0.9.5+6
 
 environment:
   sdk: ^3.9.2
@@ -47,15 +47,18 @@ dependencies:
   http_parser: ^4.1.2
   flutter_local_notifications: ^20.1.0
   url_launcher: ^6.3.1
-  package_info_plus: ^8.1.2
+  package_info_plus: ^9.0.1
   path_provider: ^2.1.5
   open_filex: ^4.7.0
   quick_actions: ^1.1.0
-  local_auth: ^2.3.0
+  local_auth: ^3.0.1
+  mobile_scanner: ^7.0.1
   app_badge_plus: ^1.2.3
   timezone: ^0.10.1
-  flutter_timezone: ^4.1.0
+  flutter_timezone: ^5.0.2
   html: ^0.15.6
+  share_plus: ^12.0.1
+  flutter_secure_storage: ^10.0.0
 
 dev_dependencies:
   flutter_test:
@@ -66,7 +69,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the

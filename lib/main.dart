@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'services/api_service.dart';
 import 'services/notification_timezone.dart';
 import 'services/push_notification_service.dart';
+import 'services/secure_credentials_store.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'models/auth.dart';
@@ -103,13 +104,19 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   Future<void> _loadUser() async {
+    final cached = await _apiService.getCachedMe();
+    if (cached != null) {
+      _user = cached;
+      notifyListeners();
+    }
     try {
       _user = await _apiService.getMe();
-      // Ensure polling is running whenever we have an authenticated user
       PushNotificationService().startPolling();
       notifyListeners();
     } catch (e) {
-      logout();
+      if (_user == null) {
+        logout();
+      }
     }
   }
 
@@ -137,9 +144,7 @@ class AuthProvider extends ChangeNotifier {
     PushNotificationService().stopPolling();
     PushNotificationService().clearSeenIds();
     unawaited(AppBadgePlus.updateBadge(0));
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('saved_username');
-    await prefs.remove('saved_password');
+    await SecureCredentialsStore.instance.clearLoginCredentials();
     _isAuthenticated = false;
     _user = null;
     notifyListeners();

@@ -70,9 +70,11 @@ android {
         targetSdk = flutter.targetSdkVersion
 
         val tagVer = gitDescribeExactTagAtHead() ?: gitLatestTagAsVersionName()
-        val commits = gitRevCount()
+        val commits = gitRevCount() ?: 0
+        val pubspecCode = flutter.versionCode
         versionName = tagVer ?: flutter.versionName
-        versionCode = commits ?: flutter.versionCode
+        // Zawsze rośnie przy bumpie w pubspec (+N); git rev-list jako podłoga dla CI bez bumpu.
+        versionCode = (commits * 1000 + pubspecCode).coerceAtLeast(pubspecCode)
     }
 
     buildTypes {

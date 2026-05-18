@@ -40,6 +40,25 @@ String _semverCore(String s) {
 }
 
 /// Porównanie wersji z `tag_name` (np. `v1.2.10`) z `PackageInfo.version` (`1.2.3`).
+/// Porównanie numeru build (versionCode) z tagu GitHub (`v1.2.3+45`) lub samego buildu.
+bool isRemoteBuildNewer(String remoteTag, String currentBuildNumber) {
+  int? buildFromTag(String tag) {
+    final t = tag.trim();
+    final plus = t.lastIndexOf('+');
+    if (plus >= 0 && plus < t.length - 1) {
+      return int.tryParse(t.substring(plus + 1).trim());
+    }
+    return null;
+  }
+
+  final remoteBuild = buildFromTag(remoteTag);
+  final localBuild = int.tryParse(currentBuildNumber.trim());
+  if (remoteBuild != null && localBuild != null) {
+    return remoteBuild > localBuild;
+  }
+  return false;
+}
+
 bool isRemoteVersionNewer(String remoteTag, String currentVersion) {
   List<int> parts(String v) {
     final core = _semverCore(v);
@@ -141,7 +160,9 @@ class AppUpdateService {
         return null;
       }
 
-      if (!isRemoteVersionNewer(rel.tagName, info.version)) {
+      final semverNewer = isRemoteVersionNewer(rel.tagName, info.version);
+      final buildNewer = isRemoteBuildNewer(rel.tagName, info.buildNumber);
+      if (!semverNewer && !buildNewer) {
         if (ignoreDismissed) {
           return 'Masz aktualną wersję: ${info.version} (build ${info.buildNumber}). '
               'Ostatnie wydanie na GitHubie: ${rel.tagName}.';
@@ -419,6 +440,18 @@ class AppUpdateService {
           await _installChannel.invokeMethod<bool>('install', <String, dynamic>{
             'path': path,
           });
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Otwarto instalator systemu. Dokończ instalację na ekranie Androida. '
+                  'Komunikat „aplikacja nie została zainstalowana” zwykle oznacza anulowanie, '
+                  'ten sam numer build co obecna wersja lub inny podpis APK (debug vs release).',
+                ),
+                duration: Duration(seconds: 8),
+              ),
+            );
+          }
         } on PlatformException catch (e) {
           final OpenResult openResult = await OpenFilex.open(
             path,

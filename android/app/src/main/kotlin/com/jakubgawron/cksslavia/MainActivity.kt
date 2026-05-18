@@ -59,15 +59,21 @@ class MainActivity : FlutterFragmentActivity() {
                                 "${applicationContext.packageName}.slavia.fileprovider",
                                 file,
                             )
-                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(uri, "application/vnd.android.package-archive")
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                // Bez NEW_TASK — z poziomu Activity instalator dostaje prawidłowy task;
-                                // NEW_TASK często psuje Package Installer i kończy się „nie można zainstalować pakietu”.
+                            val intent =
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                                    clipData = ClipData.newRawUri("Slavia APK", uri)
+                                    Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+                                        data = uri
+                                        putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
+                                        putExtra(Intent.EXTRA_RETURN_RESULT, true)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        clipData = ClipData.newRawUri("Slavia APK", uri)
+                                    }
+                                } else {
+                                    Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(uri, "application/vnd.android.package-archive")
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
                                 }
-                            }
                             val resolves = packageManager.queryIntentActivities(
                                 intent,
                                 PackageManager.MATCH_DEFAULT_ONLY,
