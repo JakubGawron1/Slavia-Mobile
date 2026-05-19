@@ -1,5 +1,20 @@
 # Changelog — Slavia Mobile
 
+## [1.0.1+11] - 2026-05-19 (tag `v1.0.1-dev`)
+
+### Naprawione
+- **Analiza sztangi** — nakładka toru na odtwarzaczu wideo; odświeżanie statusu Premium po wczytaniu (`barbell_premium_service`).
+
+### Ulepszenia
+- **Aktualność (szczegóły)** — przycisk udostępniania wpisu (share sheet) z haptyką.
+- **Starty zawodników (kadra)** — pull-to-refresh oraz czytelniejsze puste stany i błąd sieci.
+
+### Instalacja
+Pobierz APK z [GitHub Releases](https://github.com/JakubGawron1/Slavia-Mobile/releases) (tag `v1.0.1-dev`) lub zsynchronizuj wydanie w panelu admina witryny.
+
+---
+
+
 ## [0.9.10+10] — 2026-05-19 (tag `v0.9.10-dev`)
 
 ### Nowe funkcje

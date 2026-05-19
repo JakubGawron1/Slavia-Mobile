@@ -35,6 +35,11 @@ class _CompetitionAssignmentScreenState
     setState(() => _competitionsFuture = api.getCompetitions());
   }
 
+  Future<void> _onRefresh() async {
+    _reloadCompetitions();
+    await _competitionsFuture;
+  }
+
   Future<void> _openRosterSheet(Competition competition) async {
     final api = Provider.of<ApiService>(context, listen: false);
     await showModalBottomSheet<void>(
@@ -66,41 +71,80 @@ class _CompetitionAssignmentScreenState
           style: GoogleFonts.outfit(fontWeight: FontWeight.w800),
         ),
       ),
-      body: FutureBuilder<List<Competition>>(
-        future: _competitionsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
+      body: RefreshIndicator(
+        onRefresh: _onRefresh,
+        child: FutureBuilder<List<Competition>>(
+          future: _competitionsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 120),
+                  Center(child: CircularProgressIndicator()),
+                ],
+              );
+            }
+            if (snapshot.hasError) {
+              final cs = Theme.of(context).colorScheme;
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(24),
-                child: Text(
-                  'Nie udało się wczytać kalendarza zawodów.\n${snapshot.error}',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(),
-                ),
-              ),
-            );
-          }
-          final competitions = snapshot.data ?? [];
-          if (competitions.isEmpty) {
-            return Center(
-              child: Text(
-                'Brak zawodów w systemie.',
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-            );
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            itemCount: competitions.length,
-            itemBuilder: (context, index) {
+                children: [
+                  const SizedBox(height: 48),
+                  Icon(Icons.cloud_off_rounded, size: 48, color: cs.outline),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Nie udało się wczytać kalendarza zawodów.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${snapshot.error}',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      color: cs.onSurface.withValues(alpha: 0.65),
+                    ),
+                  ),
+                ],
+              );
+            }
+            final competitions = snapshot.data ?? [];
+            if (competitions.isEmpty) {
+              final cs = Theme.of(context).colorScheme;
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(24),
+                children: [
+                  const SizedBox(height: 48),
+                  Icon(Icons.event_busy_rounded, size: 56, color: cs.outline),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Brak zawodów w systemie',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Gdy admin doda zawody w panelu, pojawią się tutaj do przypisania zawodników.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      color: cs.onSurface.withValues(alpha: 0.6),
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              );
+            }
+            return ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              itemCount: competitions.length,
+              itemBuilder: (context, index) {
               final c = competitions[index];
               return Card(
                 elevation: 0,
@@ -206,6 +250,7 @@ class _CompetitionAssignmentScreenState
             },
           );
         },
+        ),
       ),
     );
   }

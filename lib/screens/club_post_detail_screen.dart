@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/club_post.dart';
 import '../ui/slavia_ui.dart';
@@ -21,9 +23,26 @@ class ClubPostDetailScreen extends StatelessWidget {
     final body = htmlToPlainText(post.content);
     final dateStr = DateFormat.yMMMMd('pl_PL').add_Hm().format(post.createdAt.toLocal());
 
+    Future<void> sharePost() async {
+      HapticFeedback.lightImpact();
+      final excerpt = body.isEmpty
+          ? post.title
+          : (body.length > 200 ? '${body.substring(0, 200).trim()}…' : body);
+      await SharePlus.instance.share(
+        ShareParams(text: excerpt, subject: post.title),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Aktualność', style: GoogleFonts.outfit(fontWeight: FontWeight.w800)),
+        actions: [
+          IconButton(
+            tooltip: 'Udostępnij',
+            onPressed: sharePost,
+            icon: const Icon(Icons.ios_share_rounded),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
