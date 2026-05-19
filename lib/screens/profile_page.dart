@@ -615,6 +615,15 @@ class _ProfilePageState extends State<ProfilePage> {
                   }
                 },
               ),
+              ListTile(
+                leading: const Icon(Icons.delete_sweep_outlined),
+                title: const Text('Usuń pliki aktualizacji'),
+                subtitle: const Text(
+                  'Cache pobrania, pending_update.apk i slavia_update.apk z Pobranych',
+                ),
+                onTap: () => AppUpdateService.instance
+                    .confirmAndClearUpdateArtifacts(context),
+              ),
             ]),
           ],
         ),

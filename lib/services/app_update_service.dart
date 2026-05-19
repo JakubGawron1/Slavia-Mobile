@@ -158,6 +158,39 @@ Future<GithubLatestRelease?> fetchLatestGithubRelease() async {
 const _kDismissedTagKey = 'app_update_dismissed_tag';
 const _installChannel = MethodChannel('slavia_mobile/install_apk');
 
+/// Podsumowanie plików APK pozostawionych po pobraniu aktualizacji.
+class UpdateArtifactsSummary {
+  const UpdateArtifactsSummary({
+    required this.fileCount,
+    required this.totalBytes,
+    required this.items,
+  });
+
+  final int fileCount;
+  final int totalBytes;
+  final List<String> items;
+
+  bool get isEmpty => fileCount == 0 && totalBytes == 0;
+}
+
+class ClearUpdateArtifactsResult {
+  const ClearUpdateArtifactsResult({
+    required this.deletedCount,
+    required this.bytesFreed,
+  });
+
+  final int deletedCount;
+  final int bytesFreed;
+}
+
+String formatUpdateBytes(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  if (bytes < 1024 * 1024) {
+    return '${(bytes / 1024).toStringAsFixed(1)} KB';
+  }
+  return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+}
+
 class AppUpdateService {
   AppUpdateService._();
   static final AppUpdateService instance = AppUpdateService._();
@@ -767,6 +800,164 @@ class AppUpdateService {
       SnackBar(
         content: Text(buffer.toString().trim()),
         duration: const Duration(seconds: 10),
+      ),
+    );
+  }
+
+  /// Pliki APK w cache aplikacji (oraz na Androidzie w folderze updates + Pobrane).
+  Future<UpdateArtifactsSummary> listUpdateArtifacts() async {
+    final items = <String>[];
+    var totalBytes = 0;
+    var fileCount = 0;
+
+    try {
+      final temp = await getTemporaryDirectory();
+      await for (final entity in temp.list(followLinks: false)) {
+        if (entity is! File) continue;
+        final name = entity.uri.pathSegments.last;
+        if (!name.startsWith('slavia_update_') || !name.endsWith('.apk')) {
+          continue;
+        }
+        final len = await entity.length();
+        items.add('Cache: $name');
+        totalBytes += len;
+        fileCount++;
+      }
+    } catch (_) {}
+
+    if (Platform.isAndroid) {
+      try {
+        final dynamic raw =
+            await _installChannel.invokeMethod<dynamic>('listUpdateArtifacts');
+        if (raw is Map) {
+          final nativeItems = raw['items'];
+          if (nativeItems is List) {
+            for (final entry in nativeItems) {
+              if (entry is! Map) continue;
+              final label = entry['label'] as String? ?? 'Plik APK';
+              final bytes = (entry['bytes'] as num?)?.toInt() ?? 0;
+              items.add(label);
+              totalBytes += bytes;
+              fileCount++;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    return UpdateArtifactsSummary(
+      fileCount: fileCount,
+      totalBytes: totalBytes,
+      items: items,
+    );
+  }
+
+  /// Usuwa pliki aktualizacji (cache, pending_update, slavia_update.apk w Pobranych).
+  Future<ClearUpdateArtifactsResult> clearUpdateArtifacts() async {
+    var deletedCount = 0;
+    var bytesFreed = 0;
+
+    try {
+      final temp = await getTemporaryDirectory();
+      await for (final entity in temp.list(followLinks: false)) {
+        if (entity is! File) continue;
+        final name = entity.uri.pathSegments.last;
+        if (!name.startsWith('slavia_update_') || !name.endsWith('.apk')) {
+          continue;
+        }
+        final len = await entity.length();
+        try {
+          await entity.delete();
+          deletedCount++;
+          bytesFreed += len;
+        } catch (_) {}
+      }
+    } catch (_) {}
+
+    if (Platform.isAndroid) {
+      try {
+        final dynamic raw = await _installChannel.invokeMethod<dynamic>(
+          'clearUpdateArtifacts',
+        );
+        if (raw is Map) {
+          deletedCount += (raw['deletedCount'] as num?)?.toInt() ?? 0;
+          bytesFreed += (raw['bytesFreed'] as num?)?.toInt() ?? 0;
+        }
+      } catch (_) {}
+    }
+
+    return ClearUpdateArtifactsResult(
+      deletedCount: deletedCount,
+      bytesFreed: bytesFreed,
+    );
+  }
+
+  Future<void> confirmAndClearUpdateArtifacts(BuildContext context) async {
+    final summary = await listUpdateArtifacts();
+    if (!context.mounted) return;
+
+    if (summary.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Brak zapisanych plików aktualizacji.')),
+      );
+      return;
+    }
+
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (dlgCtx) => AlertDialog(
+        title: const Text('Usunąć pliki aktualizacji?'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Łącznie: ${summary.fileCount} plik(ów), '
+                '${formatUpdateBytes(summary.totalBytes)}.',
+              ),
+              const SizedBox(height: 12),
+              ...summary.items.map(
+                (line) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text('• $line', style: const TextStyle(fontSize: 13)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Możesz ponownie pobrać aktualizację z profilu. '
+                'Usunięcie nie odinstalowuje zainstalowanej aplikacji.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dlgCtx, false),
+            child: const Text('Anuluj'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dlgCtx, true),
+            child: const Text('Usuń'),
+          ),
+        ],
+      ),
+    );
+
+    if (proceed != true || !context.mounted) return;
+
+    final result = await clearUpdateArtifacts();
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result.deletedCount > 0
+              ? 'Usunięto ${result.deletedCount} plik(ów) '
+                  '(${formatUpdateBytes(result.bytesFreed)}).'
+              : 'Nie znaleziono plików do usunięcia.',
+        ),
       ),
     );
   }

@@ -241,6 +241,22 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                     }
 
+                    "listUpdateArtifacts" -> {
+                        try {
+                            result.success(collectUpdateArtifacts())
+                        } catch (e: Exception) {
+                            result.error("LIST_FAILED", e.message ?: e.toString(), null)
+                        }
+                    }
+
+                    "clearUpdateArtifacts" -> {
+                        try {
+                            result.success(clearUpdateArtifacts())
+                        } catch (e: Exception) {
+                            result.error("CLEAR_FAILED", e.message ?: e.toString(), null)
+                        }
+                    }
+
                     "runUpdateFallbackUninstall" -> {
                         val path = call.argument<String>("path")
                         if (path.isNullOrBlank()) {
@@ -420,6 +436,120 @@ class MainActivity : FlutterFragmentActivity() {
         } catch (_: PackageManager.NameNotFoundException) {
             false
         }
+
+    private fun collectUpdateArtifacts(): Map<String, Any?> {
+        val items = mutableListOf<Map<String, Any?>>()
+        var totalBytes = 0L
+
+        val updatesDir = File(getExternalFilesDir(null), "updates")
+        if (updatesDir.exists()) {
+            updatesDir.listFiles()?.forEach { file ->
+                if (file.isFile && file.name.endsWith(".apk", ignoreCase = true)) {
+                    val len = file.length()
+                    items.add(
+                        mapOf(
+                            "label" to "Aplikacja: ${file.name}",
+                            "bytes" to len,
+                        ),
+                    )
+                    totalBytes += len
+                }
+            }
+        }
+
+        val downloadBytes = downloadApkSizeBytes()
+        if (downloadBytes > 0) {
+            items.add(
+                mapOf(
+                    "label" to "Pobrane: $FALLBACK_DOWNLOAD_NAME",
+                    "bytes" to downloadBytes,
+                ),
+            )
+            totalBytes += downloadBytes
+        }
+
+        return mapOf(
+            "items" to items,
+            "totalBytes" to totalBytes,
+            "fileCount" to items.size,
+        )
+    }
+
+    private fun clearUpdateArtifacts(): Map<String, Any?> {
+        var deletedCount = 0
+        var bytesFreed = 0L
+
+        val updatesDir = File(getExternalFilesDir(null), "updates")
+        if (updatesDir.exists()) {
+            updatesDir.listFiles()?.forEach { file ->
+                if (file.isFile && file.name.endsWith(".apk", ignoreCase = true)) {
+                    val len = file.length()
+                    if (file.delete()) {
+                        deletedCount++
+                        bytesFreed += len
+                    }
+                }
+            }
+        }
+
+        val downloadSize = downloadApkSizeBytes()
+        val removedDownloads = deleteDownloadApk()
+        if (removedDownloads > 0) {
+            deletedCount += removedDownloads
+            bytesFreed += downloadSize
+        }
+
+        return mapOf(
+            "deletedCount" to deletedCount,
+            "bytesFreed" to bytesFreed,
+        )
+    }
+
+    private fun downloadApkSizeBytes(): Long {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val projection = arrayOf(MediaStore.Downloads.SIZE)
+            val selection = "${MediaStore.Downloads.DISPLAY_NAME} = ?"
+            contentResolver
+                .query(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    projection,
+                    selection,
+                    arrayOf(FALLBACK_DOWNLOAD_NAME),
+                    null,
+                )?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val idx = cursor.getColumnIndex(MediaStore.Downloads.SIZE)
+                        if (idx >= 0) return cursor.getLong(idx)
+                    }
+                }
+            return 0
+        }
+        @Suppress("DEPRECATION")
+        val file =
+            File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                FALLBACK_DOWNLOAD_NAME,
+            )
+        return if (file.isFile) file.length() else 0
+    }
+
+    private fun deleteDownloadApk(): Int {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val selection = "${MediaStore.Downloads.DISPLAY_NAME} = ?"
+            return contentResolver.delete(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                selection,
+                arrayOf(FALLBACK_DOWNLOAD_NAME),
+            )
+        }
+        @Suppress("DEPRECATION")
+        val file =
+            File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                FALLBACK_DOWNLOAD_NAME,
+            )
+        return if (file.exists() && file.delete()) 1 else 0
+    }
 
     private fun copyApkToDownloads(source: File): Uri? {
         return try {
