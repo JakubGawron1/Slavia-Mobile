@@ -88,11 +88,20 @@ Repo: **Slavia-mobile** → **Settings** → **Secrets and variables** → **Act
 
 Skrypt wypisze długość i skopiuje Base64 do schowka — wklej całość jako wartość sekretu `ANDROID_KEYSTORE_BASE64`.
 
-Alternatywnie ręcznie:
+Alternatywnie ręcznie (musi być **jedna linia**):
 
 ```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\.android\slavia-release.jks")) | Set-Clipboard
+[Convert]::ToBase64String(
+  [IO.File]::ReadAllBytes("$env:USERPROFILE\.android\slavia-release.jks"),
+  [Base64FormattingOptions]::None
+) | Set-Content -NoNewline -Encoding ascii "$env:TEMP\slavia-keystore-base64.txt"
 ```
+
+### Błąd CI: `base64: invalid input`
+
+1. Usuń sekret `ANDROID_KEYSTORE_BASE64` i utwórz go **od nowa**.
+2. Uruchom `.\scripts\encode-android-keystore.ps1` — wklej z pliku `%TEMP%\slavia-keystore-base64.txt` (Ctrl+A), **bez** cudzysłowów i bez nowej linii na końcu.
+3. Nie wklejaj ścieżki do `.jks` ani hasła — tylko ciąg Base64 (~kilka tysięcy znaków).
 
 ---
 

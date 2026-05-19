@@ -14,15 +14,20 @@ if (-not (Test-Path -LiteralPath $KeystorePath)) {
 }
 
 $bytes = [IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $KeystorePath))
-$b64 = [Convert]::ToBase64String($bytes)
+# Jedna linia, bez łamań — inaczej GNU base64 na CI rzuca „invalid input”.
+$b64 = [Convert]::ToBase64String($bytes, [Base64FormattingOptions]::None)
 
+$outTxt = Join-Path $env:TEMP "slavia-keystore-base64.txt"
+[System.IO.File]::WriteAllText($outTxt, $b64, [Text.UTF8Encoding]::new($false))
 Set-Clipboard -Value $b64
 
 Write-Host "OK: $KeystorePath ($($bytes.Length) bajtów)"
-Write-Host "Base64: $($b64.Length) znaków — skopiowano do schowka."
+Write-Host "Base64: $($b64.Length) znaków (jedna linia)."
+Write-Host "Plik:   $outTxt  — otwórz, Ctrl+A, skopiuj do sekretu GitHub."
+Write-Host "Schowek: skopiowano (wklej bez dodatkowych enterów / cudzysłowów)."
 Write-Host ""
 Write-Host "GitHub → Slavia-mobile → Settings → Secrets → Actions:"
-Write-Host "  ANDROID_KEYSTORE_BASE64  = wklej ze schowka"
+Write-Host "  ANDROID_KEYSTORE_BASE64  = cała jedna linia z pliku lub schowka"
 Write-Host "  ANDROID_KEYSTORE_PASSWORD = Slavia"
 Write-Host "  ANDROID_KEY_ALIAS         = slavia"
 Write-Host "  ANDROID_KEY_PASSWORD      = Slavia"

@@ -51,13 +51,31 @@ jobs:
             exit 0
           fi
           KEYSTORE="${RUNNER_TEMP}/slavia-release.jks"
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE"
-          if [ ! -s "$KEYSTORE" ]; then
-            echo "::error::Keystore po dekodowaniu jest pusty — sprawdź sekret ANDROID_KEYSTORE_BASE64."
+          # Sekret wklejony z Windows / schowka często ma \r, spacje lub łamania linii — to psuje GNU base64.
+          B64_CLEAN=$(printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]')
+          B64_LEN=${#B64_CLEAN}
+          echo "Base64 po oczyszczeniu: ${B64_LEN} znaków"
+          if [ "$B64_LEN" -lt 100 ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 za krótki (${B64_LEN} znaków). Wygeneruj ponownie: scripts/encode-android-keystore.ps1"
             exit 1
           fi
+          if ! printf '%s' "$B64_CLEAN" | openssl base64 -d -A -out "$KEYSTORE" 2>/dev/null; then
+            if ! printf '%s' "$B64_CLEAN" | base64 --decode --ignore-garbage > "$KEYSTORE" 2>/dev/null; then
+              echo "::error::Niepoprawny Base64 w ANDROID_KEYSTORE_BASE64. Uruchom encode-android-keystore.ps1 i wklej jedną linię bez cudzysłowów."
+              exit 1
+            fi
+          fi
+          KS_SIZE=$(wc -c < "$KEYSTORE" | tr -d ' ')
+          if [ "$KS_SIZE" -lt 100 ]; then
+            echo "::error::Keystore po dekodowaniu za mały (${KS_SIZE} B)."
+            exit 1
+          fi
+          MAGIC=$(head -c 4 "$KEYSTORE" | od -An -tx1 | tr -d ' \n')
+          if [ "$MAGIC" != "feeddfeed" ] && [ "${MAGIC:0:2}" != "3082" ] && [ "${MAGIC:0:2}" != "3081" ]; then
+            echo "::warning::Nieznany nagłówek pliku (${MAGIC}) — sprawdź czy sekret to Base64 pliku .jks, nie ścieżka ani hasło."
+          fi
           echo "ANDROID_KEYSTORE_PATH=$KEYSTORE" >> "$GITHUB_ENV"
-          echo "Decoded keystore: $(wc -c < "$KEYSTORE") bytes"
+          echo "Decoded keystore: ${KS_SIZE} bytes"
 
       - name: Verify Android release signing
         env:
