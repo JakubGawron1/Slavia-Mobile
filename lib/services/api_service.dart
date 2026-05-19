@@ -171,8 +171,12 @@ class ApiService {
   }
 
   // Athletes
-  Future<List<Athlete>> getAthletes() async {
-    final response = await _getCachedPublic('/api/athletes');
+  Future<List<Athlete>> getAthletes({bool forceRefresh = false}) async {
+    const path = '/api/athletes';
+    if (forceRefresh) {
+      PublicApiCache.instance.invalidate(path);
+    }
+    final response = await _getCachedPublic(path);
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -180,6 +184,10 @@ class ApiService {
     } else {
       throw Exception('Failed to load athletes');
     }
+  }
+
+  Future<void> _invalidateAthletesPublicCache() async {
+    PublicApiCache.instance.invalidate('/api/athletes');
   }
 
   Future<Athlete> getAthlete(String id) async {
@@ -416,9 +424,9 @@ class ApiService {
     final payload = <String, dynamic>{
       'title': title.trim(),
       'body': body,
-      if (pinned != null) 'pinned': pinned,
-      if (sortOrder != null) 'sort_order': sortOrder,
-      if (published != null) 'published': published,
+      'pinned': ?pinned,
+      'sort_order': ?sortOrder,
+      'published': ?published,
     };
     final response = await http.post(
       Uri.parse('$baseUrl/api/announcements'),
@@ -447,9 +455,9 @@ class ApiService {
     final payload = <String, dynamic>{
       'title': title.trim(),
       'body': body,
-      if (pinned != null) 'pinned': pinned,
-      if (sortOrder != null) 'sort_order': sortOrder,
-      if (published != null) 'published': published,
+      'pinned': ?pinned,
+      'sort_order': ?sortOrder,
+      'published': ?published,
     };
     final response = await http.patch(
       Uri.parse('$baseUrl/api/announcements/${Uri.encodeComponent(id)}'),
@@ -458,6 +466,7 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
+      PublicApiCache.instance.invalidate('/api/announcements');
       return Announcement.fromJson(
         jsonDecode(response.body) as Map<String, dynamic>,
       );
@@ -614,8 +623,8 @@ class ApiService {
   }) async {
     final token = await getToken();
     final body = {
-      if (birthYear != null) 'birth_year': birthYear,
-      if (gender != null) 'gender': gender,
+      'birth_year': ?birthYear,
+      'gender': ?gender,
     };
 
     final response = await http.patch(
@@ -756,6 +765,7 @@ class ApiService {
     if (response.statusCode != 201 && response.statusCode != 200) {
       throw Exception('Failed to create athlete');
     }
+    await _invalidateAthletesPublicCache();
   }
 
   Future<void> updateAthlete(String id, Map<String, dynamic> data) async {
@@ -769,6 +779,7 @@ class ApiService {
     if (response.statusCode != 200) {
       throw Exception('Failed to update athlete');
     }
+    await _invalidateAthletesPublicCache();
   }
 
   Future<void> deleteAthlete(String id) async {
@@ -781,6 +792,7 @@ class ApiService {
     if (response.statusCode != 200 && response.statusCode != 204) {
       throw Exception('Failed to delete athlete');
     }
+    await _invalidateAthletesPublicCache();
   }
 
   // Image Upload
@@ -1302,9 +1314,9 @@ class ApiService {
       Uri.parse('$baseUrl/api/payments/my'),
       headers: _headers(token),
       body: jsonEncode({
-        if (month != null) 'month': month,
-        if (amountPln != null) 'amount_pln': amountPln,
-        if (note != null) 'note': note,
+        'month': ?month,
+        'amount_pln': ?amountPln,
+        'note': ?note,
       }),
     );
 
@@ -1327,7 +1339,7 @@ class ApiService {
         'athlete_id': athleteId,
         'session_date': sessionDate,
         'status': status,
-        if (note != null) 'note': note,
+        'note': ?note,
       }),
     );
 

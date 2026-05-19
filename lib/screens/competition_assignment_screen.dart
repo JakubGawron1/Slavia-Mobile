@@ -8,6 +8,7 @@ import '../models/competition.dart';
 import '../models/competition_participant.dart';
 import '../services/api_service.dart';
 import '../ui/slavia_ui.dart';
+import '../utils/network_feedback.dart';
 
 /// Kadra: przypisywanie zawodników do zawodów przez API `competition_participants`
 /// (`GET`/`PUT /api/competitions/{id}/participants`) — zgodnie z backendem, bez fałszywych wyników.
@@ -379,7 +380,7 @@ class _CompetitionRosterSheetState extends State<_CompetitionRosterSheet> {
                         }
                         return ListView.separated(
                           itemCount: roster.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          separatorBuilder: (context, index) => const SizedBox(height: 8),
                           itemBuilder: (_, i) {
                             final p = roster[i];
                             return Material(
@@ -476,10 +477,23 @@ class _PickAthleteDialog extends StatelessWidget {
         child: FutureBuilder<List<Athlete>>(
           future: api.getAthletes(),
           builder: (context, snap) {
-            if (!snap.hasData) {
+            if (snap.connectionState == ConnectionState.waiting &&
+                !snap.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
-            final list = snap.data!
+            if (snap.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    friendlyNetworkError(snap.error!),
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(),
+                  ),
+                ),
+              );
+            }
+            final list = (snap.data ?? [])
                 .where((a) => a.isActive && !excludeIds.contains(a.id))
                 .toList()
               ..sort((a, b) => a.fullName.compareTo(b.fullName));

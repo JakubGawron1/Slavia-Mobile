@@ -12,7 +12,7 @@ class SecureCredentialsStore {
   static const _migratedKey = 'secure_store_migrated_v1';
 
   final FlutterSecureStorage _secure = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    aOptions: AndroidOptions(),
   );
 
   Future<void> _migrateFromPrefsIfNeeded() async {

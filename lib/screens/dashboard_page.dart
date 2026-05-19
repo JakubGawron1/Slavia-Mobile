@@ -559,8 +559,9 @@ class _QuickAccessRow extends StatelessWidget {
         ),
       );
     }
-    final canTrainerPlans =
-        roles.contains('Trainer') || roles.contains('SuperAdmin');
+    final canTrainerPlans = roles.contains('Trainer') ||
+        roles.contains('Admin') ||
+        roles.contains('SuperAdmin');
     if (isStaff) {
       tiles.add(
         _quickTile(
@@ -599,7 +600,7 @@ class _QuickAccessRow extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: tiles.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            separatorBuilder: (context, index) => const SizedBox(width: 10),
             itemBuilder: (_, i) => tiles[i],
           ),
         ),

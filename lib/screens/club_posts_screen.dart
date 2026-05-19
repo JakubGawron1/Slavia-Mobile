@@ -115,7 +115,7 @@ class _ClubPostsScreenState extends State<ClubPostsScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               itemCount: list.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
               itemBuilder: (context, i) {
                 final p = list[i];
                 final excerpt = htmlToPlainText(p.content);

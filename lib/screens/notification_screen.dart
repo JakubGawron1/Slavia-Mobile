@@ -471,7 +471,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
                         itemCount: _items.length,
-                        separatorBuilder: (_, __) =>
+                        separatorBuilder: (context, index) =>
                             const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final n = _items[index];

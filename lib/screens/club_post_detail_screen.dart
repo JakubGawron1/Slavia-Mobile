@@ -52,7 +52,7 @@ class ClubPostDetailScreen extends StatelessWidget {
                   child: Image.network(
                     img,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (context, error, stackTrace) => Container(
                       color: cs.surfaceContainerHighest,
                       alignment: Alignment.center,
                       child: Icon(Icons.broken_image_outlined, color: cs.outline, size: 40),

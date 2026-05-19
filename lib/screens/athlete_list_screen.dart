@@ -235,7 +235,7 @@ class _AthleteListScreenState extends State<AthleteListScreen> {
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                           sliver: SliverList.separated(
                             itemCount: athletes.length,
-                            separatorBuilder: (_, __) =>
+                            separatorBuilder: (context, index) =>
                                 const SizedBox(height: 12),
                             itemBuilder: (context, index) {
                               final a = athletes[index];
@@ -300,7 +300,7 @@ class _AthleteListScreenState extends State<AthleteListScreen> {
                                     const EdgeInsets.fromLTRB(16, 8, 12, 24),
                                 sliver: SliverList.separated(
                                   itemCount: athletes.length,
-                                  separatorBuilder: (_, __) =>
+                                  separatorBuilder: (context, index) =>
                                       const SizedBox(height: 12),
                                   itemBuilder: (context, index) {
                                     final a = athletes[index];

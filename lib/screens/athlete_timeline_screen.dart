@@ -139,7 +139,7 @@ class _AthleteTimelineScreenState extends State<AthleteTimelineScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
                     itemCount: items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (context, index) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final it = items[index];
                       final accent = _colorForKind(it.kind, cs);

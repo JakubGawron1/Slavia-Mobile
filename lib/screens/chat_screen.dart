@@ -35,7 +35,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   bool _canStartThread(AuthUser? u) {
     final r = u?.roles ?? [];
-    return r.contains('Trainer') || r.contains('SuperAdmin');
+    return r.contains('Trainer') ||
+        r.contains('Admin') ||
+        r.contains('SuperAdmin');
   }
 
   @override

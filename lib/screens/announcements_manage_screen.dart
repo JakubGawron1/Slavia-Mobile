@@ -108,7 +108,7 @@ class _AnnouncementsManageScreenState extends State<AnnouncementsManageScreen> {
             return ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
               itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
               itemBuilder: (context, i) {
                 final a = items[i];
                 return Material(

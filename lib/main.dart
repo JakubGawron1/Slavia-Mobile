@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/api_service.dart';
+import 'services/barbell_premium_service.dart';
 import 'services/notification_timezone.dart';
 import 'services/push_notification_service.dart';
 import 'services/secure_credentials_store.dart';
@@ -22,6 +23,7 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final themeProvider = ThemeProvider(prefs);
   final apiService = ApiService();
+  final barbellPremium = BarbellPremiumService();
   themeProvider.attachApi(apiService);
   final token = await apiService.getToken();
 
@@ -34,6 +36,7 @@ void main() async {
         ChangeNotifierProvider.value(value: themeProvider),
         Provider<ApiService>.value(value: apiService),
         ChangeNotifierProvider(create: (_) => AuthProvider(apiService, token)),
+        ChangeNotifierProvider.value(value: barbellPremium),
         Provider<PushNotificationService>.value(
           value: PushNotificationService(),
         ),

@@ -30,8 +30,9 @@ class CalculatorsPage extends StatelessWidget {
     final canStaffStarts = roles.contains('Trainer') ||
         roles.contains('Admin') ||
         roles.contains('SuperAdmin');
-    final canTrainerPlans =
-        roles.contains('Trainer') || roles.contains('SuperAdmin');
+    final canTrainerPlans = roles.contains('Trainer') ||
+        roles.contains('Admin') ||
+        roles.contains('SuperAdmin');
     final isClubAdmin =
         roles.contains('Admin') || roles.contains('SuperAdmin');
 
@@ -210,6 +211,14 @@ class CalculatorsPage extends StatelessWidget {
               Colors.orange,
               const AnnouncementsManageScreen(),
             ),
+            _toolCard(
+              context,
+              'Zarządzanie zawodnikami',
+              'Baza zawodników klubu i ich dane.',
+              Icons.people_rounded,
+              Colors.deepOrange,
+              const SuperAdminAthleteManagerScreen(),
+            ),
           ],
 
           // SuperAdmin tools
@@ -226,14 +235,6 @@ class CalculatorsPage extends StatelessWidget {
               Icons.supervisor_account_rounded,
               Colors.red,
               const UserManagementScreen(),
-            ),
-            _toolCard(
-              context,
-              'Zarządzanie zawodnikami',
-              'Baza zawodników klubu i ich dane.',
-              Icons.people_rounded,
-              Colors.deepOrange,
-              const SuperAdminAthleteManagerScreen(),
             ),
             _toolCard(
               context,

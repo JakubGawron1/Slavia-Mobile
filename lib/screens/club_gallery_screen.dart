@@ -243,7 +243,7 @@ class _ClubGalleryScreenState extends State<ClubGalleryScreen> {
                                     Image.network(
                                       url,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Center(
+                                      errorBuilder: (context, error, stackTrace) => Center(
                                         child: Icon(Icons.broken_image_outlined, color: cs.outline),
                                       ),
                                     ),
@@ -315,7 +315,7 @@ class _ClubGalleryPhotoPage extends StatelessWidget {
                 child: Image.network(
                   imageUrl,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) =>
+                  errorBuilder: (context, error, stackTrace) =>
                       Icon(Icons.broken_image_outlined, size: 48, color: cs.outline),
                 ),
               ),

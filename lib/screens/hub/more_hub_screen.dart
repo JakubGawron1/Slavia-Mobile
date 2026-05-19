@@ -190,16 +190,18 @@ class MoreHubScreen extends StatelessWidget {
                     onTap: () => push(const UserManagementScreen()),
                   ),
                 ],
-                if (isSuper) ...[
+                if (isClubAdmin) ...[
                   const SizedBox(height: 10),
                   SlaviaUi.hubTile(
                     context,
-                    title: 'Superadmin — zawodnicy',
-                    subtitle: 'Zaawansowane zarządzanie',
-                    icon: Icons.shield_outlined,
-                    accent: Colors.deepPurple,
+                    title: 'Zarządzanie zawodnikami',
+                    subtitle: 'Baza zawodników klubu',
+                    icon: Icons.people_rounded,
+                    accent: Colors.deepOrange,
                     onTap: () => push(const SuperAdminAthleteManagerScreen()),
                   ),
+                ],
+                if (isSuper) ...[
                   const SizedBox(height: 10),
                   SlaviaUi.hubTile(
                     context,

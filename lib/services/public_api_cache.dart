@@ -36,9 +36,15 @@ class PublicApiCache {
     }
   }
 
-  void invalidate(String key) => _store.remove(key);
+  void invalidate(String path) {
+    _store.remove(path);
+    unawaited(PersistentApiCache.instance.remove(path));
+  }
 
-  void clear() => _store.clear();
+  void clear() {
+    _store.clear();
+    unawaited(PersistentApiCache.instance.clearAll());
+  }
 
   /// Klucz stabilny dla listy JSON (sortowane pola w URI).
   static String keyFor(String path, {Map<String, String>? query}) {

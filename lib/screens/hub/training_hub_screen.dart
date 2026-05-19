@@ -22,8 +22,9 @@ class TrainingHubScreen extends StatelessWidget {
     final roles = auth.user?.roles ?? [];
     final isAthlete = roles.contains('Athlete');
     final athleteId = auth.user?.athleteId ?? '';
-    final canTrainerPlans =
-        roles.contains('Trainer') || roles.contains('SuperAdmin');
+    final canTrainerPlans = roles.contains('Trainer') ||
+        roles.contains('Admin') ||
+        roles.contains('SuperAdmin');
     final primary = Theme.of(context).colorScheme.primary;
 
     void push(Widget page) {
