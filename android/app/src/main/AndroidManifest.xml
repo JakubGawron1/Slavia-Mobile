@@ -50,6 +50,13 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/slavia_apk_file_paths" />
         </provider>
+        <receiver
+            android:name=".InstallResultReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.jakubgawron.cksslavia.INSTALL_RESULT" />
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

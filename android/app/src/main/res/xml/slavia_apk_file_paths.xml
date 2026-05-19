@@ -3,5 +3,6 @@
     <cache-path name="slavia_apk_cache" path="." />
     <external-cache-path name="slavia_apk_ext_cache" path="." />
     <files-path name="slavia_apk_files" path="." />
+    <external-files-path name="slavia_apk_updates" path="updates/" />
     <external-path name="slavia_apk_downloads" path="Download/" />
 </paths>

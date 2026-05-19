@@ -1,15 +1,19 @@
 package com.jakubgawron.cksslavia
 
 import android.app.Activity
+import android.app.PendingIntent
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ContentValues
 import android.content.Intent
+import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import android.provider.Settings
 import androidx.activity.result.ActivityResultLauncher
@@ -29,7 +33,6 @@ class MainActivity : FlutterFragmentActivity() {
     private var pendingUninstallResult: MethodChannel.Result? = null
 
     private var pendingFallbackResult: MethodChannel.Result? = null
-    private var pendingFallbackApkPath: String? = null
     private var pendingFallbackDownloadUri: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,26 +51,23 @@ class MainActivity : FlutterFragmentActivity() {
 
     private fun handleUninstallActivityResult(resultCode: Int) {
         val fallbackPending = pendingFallbackResult
-        val fallbackPath = pendingFallbackApkPath
         val downloadUriStr = pendingFallbackDownloadUri
 
-        if (fallbackPending != null && fallbackPath != null) {
+        if (fallbackPending != null) {
             pendingFallbackResult = null
-            pendingFallbackApkPath = null
             pendingFallbackDownloadUri = null
 
             val stillInstalled = isPackageInstalled(packageName)
             var installLaunched = false
             var installError: String? = null
 
-            if (stillInstalled) {
-                val launch = launchInstallForFile(File(fallbackPath))
-                installLaunched = launch.first
-                installError = launch.second
-            } else if (!downloadUriStr.isNullOrBlank()) {
-                val launch = launchInstallForUri(Uri.parse(downloadUriStr))
-                installLaunched = launch.first
-                installError = launch.second
+            if (!downloadUriStr.isNullOrBlank()) {
+                val uri = Uri.parse(downloadUriStr)
+                Handler(Looper.getMainLooper()).postDelayed({
+                    val launch = launchInstallForUri(uri)
+                    android.util.Log.i(TAG, "Post-uninstall install: ${launch.first} ${launch.second}")
+                }, 700)
+                installLaunched = true
             }
 
             fallbackPending.success(
@@ -135,7 +135,13 @@ class MainActivity : FlutterFragmentActivity() {
                             return@setMethodCallHandler
                         }
                         try {
-                            val uri = fileUriForInstall(file)
+                            val stable = copyToUpdatesDir(file)
+                            val session = tryPackageInstallerInstall(stable)
+                            if (session) {
+                                result.success(mapOf("status" to "session_started"))
+                                return@setMethodCallHandler
+                            }
+                            val uri = fileUriForInstall(stable)
                             if (pendingInstallResult != null) {
                                 result.error("BUSY", "Instalacja już trwa.", null)
                                 return@setMethodCallHandler
@@ -152,6 +158,38 @@ class MainActivity : FlutterFragmentActivity() {
                         } catch (e: Exception) {
                             pendingInstallResult = null
                             result.error("OPEN_FAILED", e.message ?: e.toString(), null)
+                        }
+                    }
+
+                    "installViaDownloads" -> {
+                        val path = call.argument<String>("path")
+                        if (path.isNullOrBlank()) {
+                            result.error("BAD_ARGUMENT", "path required", null)
+                            return@setMethodCallHandler
+                        }
+                        val file = File(path)
+                        if (!file.exists()) {
+                            result.error("NOT_FOUND", "file missing", null)
+                            return@setMethodCallHandler
+                        }
+                        try {
+                            val downloadUri = copyApkToDownloads(file)
+                            if (downloadUri == null) {
+                                result.error("COPY_FAILED", "Nie udało się skopiować APK do Pobranych.", null)
+                                return@setMethodCallHandler
+                            }
+                            val launched = launchInstallForUri(downloadUri)
+                            result.success(
+                                mapOf(
+                                    "installLaunched" to launched.first,
+                                    "installError" to launched.second,
+                                    "downloadCopied" to true,
+                                    "downloadFileName" to FALLBACK_DOWNLOAD_NAME,
+                                    "downloadUri" to downloadUri.toString(),
+                                ),
+                            )
+                        } catch (e: Exception) {
+                            result.error("INSTALL_FAILED", e.message ?: e.toString(), null)
                         }
                     }
 
@@ -180,18 +218,50 @@ class MainActivity : FlutterFragmentActivity() {
                             result.error("NOT_FOUND", "file missing", null)
                             return@setMethodCallHandler
                         }
+                        try {
+                            val downloadUri = copyApkToDownloads(file)
+                            if (downloadUri == null) {
+                                result.error("COPY_FAILED", "Nie udało się skopiować APK do Pobranych.", null)
+                                return@setMethodCallHandler
+                            }
+                            val launch = launchInstallForUri(downloadUri)
+                            result.success(
+                                mapOf(
+                                    "uninstall" to "skipped",
+                                    "stillInstalled" to isPackageInstalled(packageName),
+                                    "installLaunched" to launch.first,
+                                    "installError" to launch.second,
+                                    "downloadCopied" to true,
+                                    "downloadFileName" to FALLBACK_DOWNLOAD_NAME,
+                                    "downloadUri" to downloadUri.toString(),
+                                ),
+                            )
+                        } catch (e: Exception) {
+                            result.error("FALLBACK_FAILED", e.message ?: e.toString(), null)
+                        }
+                    }
+
+                    "runUpdateFallbackUninstall" -> {
+                        val path = call.argument<String>("path")
+                        if (path.isNullOrBlank()) {
+                            result.error("BAD_ARGUMENT", "path required", null)
+                            return@setMethodCallHandler
+                        }
+                        val file = File(path)
+                        if (!file.exists()) {
+                            result.error("NOT_FOUND", "file missing", null)
+                            return@setMethodCallHandler
+                        }
                         if (pendingFallbackResult != null) {
                             result.error("BUSY", "Procedura aktualizacji już trwa.", null)
                             return@setMethodCallHandler
                         }
                         try {
                             val downloadUri = copyApkToDownloads(file)
-                            pendingFallbackApkPath = path
                             pendingFallbackDownloadUri = downloadUri?.toString()
                             pendingFallbackResult = result
                             uninstallLauncher.launch(uninstallIntent())
                         } catch (e: Exception) {
-                            pendingFallbackApkPath = null
                             pendingFallbackDownloadUri = null
                             pendingFallbackResult = null
                             result.error("FALLBACK_FAILED", e.message ?: e.toString(), null)
@@ -201,6 +271,58 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    private fun copyToUpdatesDir(source: File): File {
+        val dir = File(getExternalFilesDir(null), "updates")
+        if (!dir.exists()) dir.mkdirs()
+        val dest = File(dir, "pending_update.apk")
+        FileInputStream(source).use { input ->
+            dest.outputStream().use { output -> input.copyTo(output) }
+        }
+        return dest
+    }
+
+    private fun tryPackageInstallerInstall(file: File): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) return false
+        return try {
+            val packageInstaller = packageManager.packageInstaller
+            val params =
+                PackageInstaller.SessionParams(
+                    PackageInstaller.SessionParams.MODE_FULL_INSTALL,
+                ).apply {
+                    setSize(file.length())
+                }
+            val sessionId = packageInstaller.createSession(params)
+            val session = packageInstaller.openSession(sessionId)
+            FileInputStream(file).use { input ->
+                session.openWrite("slavia_update", 0, file.length()).use { out ->
+                    input.copyTo(out)
+                    session.fsync(out)
+                }
+            }
+            val flags =
+                PendingIntent.FLAG_UPDATE_CURRENT or
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        PendingIntent.FLAG_MUTABLE
+                    } else {
+                        0
+                    }
+            val intent = Intent(InstallResultReceiver.ACTION).setPackage(packageName)
+            val pending =
+                PendingIntent.getBroadcast(
+                    applicationContext,
+                    sessionId,
+                    intent,
+                    flags,
+                )
+            session.commit(pending.intentSender)
+            session.close()
+            true
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "PackageInstaller failed: ${e.message}")
+            false
+        }
     }
 
     private fun uninstallIntent(): Intent =
@@ -229,6 +351,7 @@ class MainActivity : FlutterFragmentActivity() {
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
             }
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         grantUriToResolvers(intent, uri)
         return intent
     }
@@ -254,15 +377,15 @@ class MainActivity : FlutterFragmentActivity() {
     private fun launchInstallForFile(file: File): Pair<Boolean, String?> =
         try {
             val uri = fileUriForInstall(file)
-            startActivity(buildInstallIntent(uri))
-            true to null
+            launchInstallForUri(uri)
         } catch (e: Exception) {
             false to (e.message ?: e.toString())
         }
 
     private fun launchInstallForUri(uri: Uri): Pair<Boolean, String?> =
         try {
-            startActivity(buildInstallIntent(uri))
+            val intent = buildInstallIntent(uri)
+            applicationContext.startActivity(intent)
             true to null
         } catch (e: Exception) {
             false to (e.message ?: e.toString())
@@ -342,6 +465,7 @@ class MainActivity : FlutterFragmentActivity() {
 
     companion object {
         private const val CHANNEL = "slavia_mobile/install_apk"
+        private const val TAG = "SlaviaInstall"
         private const val APK_MIME = "application/vnd.android.package-archive"
         private const val FALLBACK_DOWNLOAD_NAME = "slavia_update.apk"
     }

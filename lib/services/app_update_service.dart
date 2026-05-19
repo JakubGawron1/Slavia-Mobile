@@ -533,7 +533,7 @@ class AppUpdateService {
       case 'cancelled':
         return 'anulowano instalację w systemie';
       case 'failed':
-        return 'instalator zgłosił błąd (np. konflikt podpisu lub ten sam build)';
+        return 'instalator zgłosił błąd (np. starszy build niż zainstalowany — zwiększ versionCode w pubspec i wypuść nowy tag)';
       default:
         return 'instalacja nie powiodła się';
     }
@@ -547,12 +547,16 @@ class AppUpdateService {
         <String, dynamic>{'path': path},
       );
       status = _installStatusFromResult(raw);
-      if (status == 'success') {
+      if (status == 'success' || status == 'session_started') {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Aktualizacja zainstalowana. Możesz uruchomić aplikację ponownie.'),
-              duration: Duration(seconds: 5),
+            SnackBar(
+              content: Text(
+                status == 'session_started'
+                    ? 'Potwierdź instalację w oknie systemu Androida.'
+                    : 'Aktualizacja zainstalowana. Możesz uruchomić aplikację ponownie.',
+              ),
+              duration: const Duration(seconds: 6),
             ),
           );
         }
@@ -560,6 +564,8 @@ class AppUpdateService {
       }
     } on PlatformException catch (e) {
       if (!context.mounted) return;
+      final viaDownloads = await _tryInstallViaDownloads(context, path);
+      if (viaDownloads || !context.mounted) return;
       final opened = await _openApkWithOpenFilex(context, path, e);
       if (opened || !context.mounted) return;
       await _offerUpdateFallback(context, path, platformError: e);
@@ -568,7 +574,45 @@ class AppUpdateService {
 
     if (!context.mounted) return;
 
+    final viaDownloads = await _tryInstallViaDownloads(context, path);
+    if (viaDownloads || !context.mounted) return;
+
     await _offerUpdateFallback(context, path, status: status);
+  }
+
+  Future<bool> _tryInstallViaDownloads(BuildContext context, String path) async {
+    try {
+      final dynamic raw = await _installChannel.invokeMethod<dynamic>(
+        'installViaDownloads',
+        <String, dynamic>{'path': path},
+      );
+      if (raw is! Map) return false;
+      if (raw['installLaunched'] == true) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Skopiowano aktualizację do Pobranych (slavia_update.apk) i otwarto instalator. '
+                'Dokończ instalację na ekranie systemu.',
+              ),
+              duration: Duration(seconds: 8),
+            ),
+          );
+        }
+        return true;
+      }
+      if (raw['downloadCopied'] == true && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Plik slavia_update.apk jest w folderze Pobrane — otwórz go ręcznie, jeśli instalator się nie pojawi.',
+            ),
+            duration: Duration(seconds: 8),
+          ),
+        );
+      }
+    } catch (_) {}
+    return false;
   }
 
   Future<bool> _openApkWithOpenFilex(
@@ -612,7 +656,7 @@ class AppUpdateService {
     PlatformException? platformError,
   }) async {
     final reason = _installFailureReason(status: status, error: platformError);
-    final proceed = await showDialog<bool>(
+    final choice = await showDialog<String>(
       context: context,
       barrierDismissible: false,
       builder: (dlgCtx) => AlertDialog(
@@ -625,34 +669,39 @@ class AppUpdateService {
               Text('Powód: $reason.'),
               const SizedBox(height: 12),
               const Text(
-                'Możemy spróbować aktualizacji przez odinstalowanie obecnej wersji '
-                'i ponowną instalację pobranego APK.\n\n'
-                'Android wymaga Twojego potwierdzenia odinstalowania — aplikacja nie może '
-                'usunąć się sama bez Twojej zgody (Android 12 i nowsze).\n\n'
-                'Plik aktualizacji zostanie też skopiowany do folderu Pobrane jako '
-                'slavia_update.apk — jeśli aplikacja się zamknie po odinstalowaniu, '
-                'otwórz ten plik ręcznie i zainstaluj ponownie.',
+                'Przy tym samym podpisie APK (release z GitHuba) zwykle wystarczy instalacja '
+                '„na wierzchu” — bez odinstalowywania.\n\n'
+                '1. „Otwórz instalator” — kopiuje plik do Pobranych i uruchamia system.\n'
+                '2. „Odinstaluj…” — tylko gdy Android zgłasza konflikt podpisu; po odinstalowaniu '
+                'otwórz ręcznie slavia_update.apk z folderu Pobrane.',
               ),
             ],
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dlgCtx, false),
+            onPressed: () => Navigator.pop(dlgCtx),
             child: const Text('Anuluj'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(dlgCtx, 'uninstall'),
+            child: const Text('Odinstaluj…'),
+          ),
           FilledButton(
-            onPressed: () => Navigator.pop(dlgCtx, true),
-            child: const Text('Odinstaluj i zainstaluj'),
+            onPressed: () => Navigator.pop(dlgCtx, 'install'),
+            child: const Text('Otwórz instalator'),
           ),
         ],
       ),
     );
-    if (proceed != true || !context.mounted) return;
+    if (choice == null || !context.mounted) return;
+
+    final method =
+        choice == 'uninstall' ? 'runUpdateFallbackUninstall' : 'runUpdateFallback';
 
     try {
       final dynamic raw = await _installChannel.invokeMethod<dynamic>(
-        'runUpdateFallback',
+        method,
         <String, dynamic>{'path': apkPath},
       );
       if (!context.mounted) return;
@@ -690,25 +739,27 @@ class AppUpdateService {
         raw['downloadFileName'] as String? ?? 'slavia_update.apk';
 
     final buffer = StringBuffer();
-    if (uninstall == 'cancelled') {
+    if (uninstall == 'skipped') {
+      buffer.write('Skopiowano APK do Pobranych. ');
+    } else if (uninstall == 'cancelled') {
       buffer.write('Odinstalowanie anulowano. ');
     } else if (!stillInstalled) {
       buffer.write(
-        'Aplikacja została odinstalowana. ',
+        'Aplikacja została odinstalowana. Otwórz plik z Pobranych i zainstaluj ponownie. ',
       );
     } else {
       buffer.write('Aplikacja nadal jest zainstalowana. ');
     }
 
     if (installLaunched) {
-      buffer.write('Otwarto ponownie instalator systemu.');
+      buffer.write('Uruchomiono instalator systemu.');
     } else if (installError != null && installError.isNotEmpty) {
-      buffer.write('Nie udało się otworzyć instalatora: $installError. ');
+      buffer.write('Instalator: $installError. ');
     }
 
     if (downloadCopied) {
       buffer.write(
-        ' Kopia APK w Pobranych: $fileName — użyj jej, jeśli instalator się nie otworzy.',
+        ' Plik: Pobrane/$fileName — dotknij go, jeśli nic się nie otworzyło.',
       );
     }
 
