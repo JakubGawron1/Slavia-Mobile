@@ -580,16 +580,27 @@ class AppUpdateService {
         <String, dynamic>{'path': path},
       );
       status = _installStatusFromResult(raw);
-      if (status == 'success' || status == 'session_started') {
+      if (status == 'success') {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
+            const SnackBar(
               content: Text(
-                status == 'session_started'
-                    ? 'Potwierdź instalację w oknie systemu Androida.'
-                    : 'Aktualizacja zainstalowana. Możesz uruchomić aplikację ponownie.',
+                'Aktualizacja zainstalowana. Możesz uruchomić aplikację ponownie.',
               ),
-              duration: const Duration(seconds: 6),
+              duration: Duration(seconds: 6),
+            ),
+          );
+        }
+        return;
+      }
+      if (status == 'session_started') {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Potwierdź instalację w oknie systemu Androida.',
+              ),
+              duration: Duration(seconds: 6),
             ),
           );
         }
@@ -597,6 +608,10 @@ class AppUpdateService {
       }
     } on PlatformException catch (e) {
       if (!context.mounted) return;
+      if (e.code == 'INSTALL_BLOCKED') {
+        await _ensureAndroidInstallAllowed(context);
+        return;
+      }
       final viaDownloads = await _tryInstallViaDownloads(context, path);
       if (viaDownloads || !context.mounted) return;
       final opened = await _openApkWithOpenFilex(context, path, e);

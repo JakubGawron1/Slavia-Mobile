@@ -65,7 +65,10 @@ class MainActivity : FlutterFragmentActivity() {
                 val uri = Uri.parse(downloadUriStr)
                 Handler(Looper.getMainLooper()).postDelayed({
                     val launch = launchInstallForUri(uri)
-                    android.util.Log.i(TAG, "Post-uninstall install: ${launch.first} ${launch.second}")
+                    android.util.Log.i(
+                        TAG,
+                        "Post-uninstall install: launched=${launch.first} err=${launch.second}",
+                    )
                 }, 700)
                 installLaunched = true
             }
@@ -135,12 +138,17 @@ class MainActivity : FlutterFragmentActivity() {
                             return@setMethodCallHandler
                         }
                         try {
-                            val stable = copyToUpdatesDir(file)
-                            val session = tryPackageInstallerInstall(stable)
-                            if (session) {
-                                result.success(mapOf("status" to "session_started"))
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                                !packageManager.canRequestPackageInstalls()
+                            ) {
+                                result.error(
+                                    "INSTALL_BLOCKED",
+                                    "Włącz instalację z nieznanych źródeł dla CKS Slavia w ustawieniach Androida.",
+                                    null,
+                                )
                                 return@setMethodCallHandler
                             }
+                            val stable = copyToUpdatesDir(file)
                             val uri = fileUriForInstall(stable)
                             if (pendingInstallResult != null) {
                                 result.error("BUSY", "Instalacja już trwa.", null)
@@ -367,7 +375,6 @@ class MainActivity : FlutterFragmentActivity() {
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
             }
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         grantUriToResolvers(intent, uri)
         return intent
     }
@@ -400,12 +407,56 @@ class MainActivity : FlutterFragmentActivity() {
 
     private fun launchInstallForUri(uri: Uri): Pair<Boolean, String?> =
         try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                !packageManager.canRequestPackageInstalls()
+            ) {
+                return false to
+                    "Włącz instalację z nieznanych źródeł dla CKS Slavia w ustawieniach Androida."
+            }
             val intent = buildInstallIntent(uri)
-            applicationContext.startActivity(intent)
+            if (isFinishing || isDestroyed) {
+                return false to "Aktywność niedostępna — otwórz plik slavia_update.apk z Pobranych."
+            }
+            startActivity(intent)
             true to null
+        } catch (e: ActivityNotFoundException) {
+            val session =
+                tryPackageInstallerFromContentUri(uri) ||
+                    tryPackageInstallerFromUpdatesFile()
+            if (session) {
+                true to null
+            } else {
+                false to "Brak aplikacji instalującej APK."
+            }
         } catch (e: Exception) {
             false to (e.message ?: e.toString())
         }
+
+    /** PackageInstaller tylko jako ostateczność (bez gwarantowanego UI na wszystkich urządzeniach). */
+    private fun tryPackageInstallerFromUpdatesFile(): Boolean {
+        val dir = File(getExternalFilesDir(null), "updates")
+        val pending = File(dir, "pending_update.apk")
+        return if (pending.isFile) tryPackageInstallerInstall(pending) else false
+    }
+
+    private fun tryPackageInstallerFromContentUri(uri: Uri): Boolean {
+        return try {
+            val dest = copyToUpdatesDirFromUri(uri) ?: return false
+            tryPackageInstallerInstall(dest)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun copyToUpdatesDirFromUri(uri: Uri): File? {
+        val dir = File(getExternalFilesDir(null), "updates")
+        if (!dir.exists()) dir.mkdirs()
+        val dest = File(dir, "pending_update.apk")
+        contentResolver.openInputStream(uri)?.use { input ->
+            dest.outputStream().use { output -> input.copyTo(output) }
+        } ?: return null
+        return dest
+    }
 
     private fun installOutcome(code: Int): Map<String, Any?> =
         when (code) {
