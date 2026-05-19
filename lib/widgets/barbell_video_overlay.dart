@@ -19,13 +19,26 @@ class BarbellVideoOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     if (samples.length < 2) return const SizedBox.shrink();
     final color = barColor ?? Theme.of(context).colorScheme.primary;
-    return CustomPaint(
-      painter: _BarbellVideoOverlayPainter(
-        samples: samples,
-        currentTimeSec: currentTimeSec,
-        barColor: color,
+    return IgnorePointer(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final w = constraints.maxWidth;
+          final h = constraints.maxHeight;
+          if (!w.isFinite || !h.isFinite || w <= 0 || h <= 0) {
+            return const SizedBox.expand();
+          }
+          return CustomPaint(
+            size: Size(w, h),
+            isComplex: true,
+            willChange: true,
+            painter: _BarbellVideoOverlayPainter(
+              samples: samples,
+              currentTimeSec: currentTimeSec,
+              barColor: color,
+            ),
+          );
+        },
       ),
-      child: const SizedBox.expand(),
     );
   }
 }

@@ -18,6 +18,7 @@ class BarbellPremiumService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _athleteUnlock = prefs.getBool(_athleteUnlockKey) ?? false;
     _loaded = true;
+    notifyListeners();
   }
 
   bool isPremiumFor(AuthUser? user) {

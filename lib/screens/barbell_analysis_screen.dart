@@ -362,13 +362,25 @@ class _BarbellAnalysisScreenState extends State<BarbellAnalysisScreen> {
                 aspectRatio: _videoController!.value.aspectRatio,
                 child: Stack(
                   fit: StackFit.expand,
+                  alignment: Alignment.center,
                   children: [
-                    VideoPlayer(_videoController!),
+                    Positioned.fill(
+                      child: FittedBox(
+                        fit: BoxFit.contain,
+                        child: SizedBox(
+                          width: _videoController!.value.size.width,
+                          height: _videoController!.value.size.height,
+                          child: VideoPlayer(_videoController!),
+                        ),
+                      ),
+                    ),
                     if (_samples.length >= 2)
-                      BarbellVideoOverlay(
-                        samples: _samples,
-                        currentTimeSec: _videoPositionSec,
-                        barColor: primary,
+                      Positioned.fill(
+                        child: BarbellVideoOverlay(
+                          samples: _samples,
+                          currentTimeSec: _videoPositionSec,
+                          barColor: primary,
+                        ),
                       ),
                   ],
                 ),
