@@ -1,57 +1,158 @@
 # Podpisywanie APK Android — CKS Slavia Mobile
 
-## Dlaczego GitHub APK ma inny podpis niż lokalna instalacja?
+## Twój keystore release (Slavia)
 
-Android traktuje każdy APK jako **aktualizację tej samej aplikacji** tylko wtedy, gdy **podpis cyfrowy (keystore) jest identyczny**. Gdy podpisy się różnią, system pokazuje błąd typu „Aplikacja nie została zainstalowana” albo wymusza odinstalowanie poprzedniej wersji.
+Po wygenerowaniu pliku `slavia-release.jks` (alias **`slavia`**, hasło keystore i klucza: **`Slavia`**) używaj **zawsze tego samego pliku** lokalnie i w GitHub Actions.
 
-Typowe przyczyny w Slavia Mobile:
+| Pole | Wartość |
+|------|---------|
+| Plik | `slavia-release.jks` (zalecane: `%USERPROFILE%\.android\slavia-release.jks`) |
+| Alias | `slavia` |
+| Hasło keystore | `Slavia` |
+| Hasło klucza | `Slavia` (przy `keytool -genkey` zwykle takie samo) |
+| Ważność | 10 000 dni (~27 lat) |
 
-| Źródło APK | Keystore | Efekt |
-|------------|----------|--------|
-| `flutter build apk --release` lokalnie (domyślnie) | Debug keystore **na Twoim PC** (`~/.android/debug.keystore`) | Podpis A |
-| GitHub Actions (`Release APK`) bez sekretów | Debug keystore **na runnerze CI** | Podpis B ≠ A |
-| GitHub Release po skonfigurowaniu sekretów | Ten sam release keystore | Spójny podpis |
+**Kopia zapasowa:** skopiuj `.jks` na dysk zewnętrzny / menedżer haseł zespołu. **Bez pliku i hasła nie odzyskasz podpisu** — nie da się wtedy wydawać aktualizacji tej samej aplikacji w sklepie / OTA.
 
-**Wniosek:** lokalny release i CI muszą używać **tego samego pliku `.jks` / `.keystore`**, albo na urządzeniu trzeba odinstalować starą wersję przed instalacją APK z innego źródła.
+---
 
-## Zalecany workflow
+## Krok 1 — dokończ `keytool` (jeśli jeszcze wisi)
 
-1. Wygeneruj **jeden** keystore release (raz, bezpiecznie zrób kopię zapasową):
+W oknie keytool na pytanie:
 
-   ```bash
-   keytool -genkey -v -keystore slavia-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias slavia
-   ```
+`Is CN=Jakub Gawron, OU=Slavia-it, O=CKS Slavia, ... correct?`
 
-2. Ustaw zmienne środowiskowe (lokalnie i w GitHub Secrets):
+wpisz **`yes`** i Enter.
 
-   | Zmienna | Opis |
-   |---------|------|
-   | `ANDROID_KEYSTORE_PATH` | Ścieżka do pliku `.jks` |
-   | `ANDROID_KEYSTORE_PASSWORD` | Hasło keystore |
-   | `ANDROID_KEY_ALIAS` | Alias klucza (np. `slavia`) |
-   | `ANDROID_KEY_PASSWORD` | Hasło klucza |
+Znaki `?` zamiast `ś`, `ą` w PowerShellu to normalne kodowanie konsoli — certyfikat i tak działa.
 
-3. W GitHub → **Settings → Secrets and variables → Actions** dodaj powyższe sekrety oraz wgraj keystore jako artifact w bezpiecznym miejscu (np. zaszyfrowany w repo prywatnym lub menedżer haseł zespołu).
+Przenieś plik z pulpitu do stałej lokalizacji (opcjonalnie, zalecane):
 
-4. `android/app/build.gradle.kts` automatycznie używa release keystore, gdy `ANDROID_KEYSTORE_PATH` jest ustawione; w przeciwnym razie fallback na debug (wygodne do dev, **nie** do dystrybucji).
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.android" | Out-Null
+Move-Item -Force "$env:USERPROFILE\Desktop\slavia-release.jks" "$env:USERPROFILE\.android\slavia-release.jks"
+```
+
+Sprawdź, że plik istnieje:
+
+```powershell
+keytool -list -v -keystore "$env:USERPROFILE\.android\slavia-release.jks" -alias slavia
+```
+
+(hasło: `Slavia`)
+
+---
+
+## Krok 2 — build release lokalnie (ten sam podpis co CI)
+
+W PowerShellu (sesja na czas buildu):
+
+```powershell
+$env:ANDROID_KEYSTORE_PATH = "$env:USERPROFILE\.android\slavia-release.jks"
+$env:ANDROID_KEYSTORE_PASSWORD = "Slavia"
+$env:ANDROID_KEY_ALIAS = "slavia"
+$env:ANDROID_KEY_PASSWORD = "Slavia"
+
+cd C:\Users\jakub\Desktop\Slavia-mobile
+git fetch --tags
+flutter build apk --release
+```
+
+APK: `build\app\outputs\flutter-apk\app-release.apk`
+
+Możesz też załadować zmienne z szablonu (skopiuj `scripts\signing-env.example.ps1` → `scripts\signing-env.local.ps1`, uzupełnij ścieżkę, **nie commituj** `signing-env.local.ps1`):
+
+```powershell
+. .\scripts\signing-env.local.ps1
+flutter build apk --release
+```
+
+---
+
+## Krok 3 — sekrety GitHub Actions (CI)
+
+Repo: **Slavia-mobile** → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
+
+| Sekret | Wartość |
+|--------|---------|
+| `ANDROID_KEYSTORE_BASE64` | plik `.jks` zakodowany w Base64 (patrz niżej) |
+| `ANDROID_KEYSTORE_PASSWORD` | `Slavia` |
+| `ANDROID_KEY_ALIAS` | `slavia` |
+| `ANDROID_KEY_PASSWORD` | `Slavia` |
+
+### Base64 keystore (Windows)
+
+```powershell
+.\scripts\encode-android-keystore.ps1 -KeystorePath "$env:USERPROFILE\.android\slavia-release.jks"
+```
+
+Skrypt wypisze długość i skopiuje Base64 do schowka — wklej całość jako wartość sekretu `ANDROID_KEYSTORE_BASE64`.
+
+Alternatywnie ręcznie:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\.android\slavia-release.jks")) | Set-Clipboard
+```
+
+---
+
+## Krok 4 — tag i release na GitHubie
+
+Workflow **Release APK** (`.github/workflows/release.yml`) buduje APK przy pushu tagu `v*` (np. `v1.0.1-dev`).
+
+```powershell
+cd C:\Users\jakub\Desktop\Slavia-mobile
+git pull
+git tag v1.0.2-dev
+git push origin v1.0.2-dev
+```
+
+W **Actions** sprawdź log kroku **Verify Android release signing** — powinno być `Release keystore: OK`.
+
+APK trafi do **GitHub Releases** przy tym tagu.
+
+Ręczny build bez tagu: **Actions** → **Release APK** → **Run workflow** (artifact `app-release-apk`).
+
+---
+
+## Dlaczego instalacja „nie działa” / wymaga odinstalowania?
+
+Android akceptuje aktualizację tylko przy **tym samym podpisie**.
+
+| Źródło APK | Keystore |
+|------------|----------|
+| Lokalny release **bez** zmiennych `ANDROID_*` | Debug PC |
+| CI **bez** sekretów | Debug runnera |
+| Lokalny + CI **z** `slavia-release.jks` | Ten sam podpis |
+
+**Po przejściu na release keystore:** odinstaluj starą apkę z telefonu (podpisana debug / starym CI), potem instaluj tylko z GitHub Releases lub lokalnego buildu z tym samym `.jks`.
+
+---
+
+## Zmienne środowiskowe (podsumowanie)
+
+| Zmienna | Opis |
+|---------|------|
+| `ANDROID_KEYSTORE_PATH` | Ścieżka do `.jks` (lokalnie; w CI ustawia workflow) |
+| `ANDROID_KEYSTORE_PASSWORD` | Hasło keystore |
+| `ANDROID_KEY_ALIAS` | `slavia` |
+| `ANDROID_KEY_PASSWORD` | Hasło klucza |
+
+`android/app/build.gradle.kts` podpina release signing, gdy plik z `ANDROID_KEYSTORE_PATH` istnieje; inaczej — debug (tylko do testów).
+
+---
 
 ## versionCode i aktualizacje w aplikacji
 
-- **`versionName`** — z tagu Git (`v0.9.10-dev`) lub najnowszego tagu `v*`.
-- **`versionCode`** — `git rev-list --count HEAD * 1000 + buildNumber z pubspec.yaml`.
+- **versionName** — z tagu Git (`v1.0.1-dev`) lub najnowszego `v*`.
+- **versionCode** — `git rev-list --count HEAD * 1000 + buildNumber` z `pubspec.yaml`.
 
-Przed buildem release:
+Przed release: `git fetch --tags` i `git pull`, żeby numer wersji zgadzał się z CI.
 
-```bash
-git fetch --tags
-git pull
-```
+---
 
-Dzięki temu lokalny APK i GitHub Release mają **ten sam numer wersji** i monotonicznie rosnący `versionCode` — wymagane przez instalator w aplikacji (`AppUpdateService`).
+## Bezpieczeństwo
 
-## Instalacja gdy podpisy się różnią
-
-1. Odinstaluj starą wersję CKS Slavia z telefonu.
-2. Zainstaluj APK z jednego, stałego źródła (np. tylko GitHub Releases po skonfigurowaniu keystore).
-
-Po ujednoliceniu keystore kolejne aktualizacje instalują się bez odinstalowywania.
+- **Nie** commituj `.jks`, `key.properties`, `signing-env.local.ps1`.
+- **Nie** wklejaj haseł do issue / czatu — tylko GitHub Secrets.
+- Hasło `Slavia` w tym dokumencie jest zgodne z Twoją konfiguracją; w produkcji rozważ silniejsze hasło i rotację kopii zapasowej.
