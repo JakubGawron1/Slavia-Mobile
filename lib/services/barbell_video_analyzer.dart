@@ -28,8 +28,8 @@ class BarbellAnalysisResult {
 
 /// Ekstrakcja klatek + ML Kit Pose — tor sztangi z nadgarstków (offline).
 class BarbellVideoAnalyzer {
-  static const _maxFrames = 48;
-  static const _minLikelihood = 0.35;
+  static const _maxFrames = 72;
+  static const _minLikelihood = 0.32;
 
   static Future<BarbellAnalysisResult> analyzeFile(String videoPath) async {
     final file = File(videoPath);
@@ -59,7 +59,7 @@ class BarbellVideoAnalyzer {
 
     final frameCount = math.min(
       _maxFrames,
-      math.max(12, (duration.inMilliseconds / 50).round()),
+      math.max(16, (duration.inMilliseconds / 33).round()),
     );
 
     final tempDir = await getTemporaryDirectory();
@@ -73,7 +73,7 @@ class BarbellVideoAnalyzer {
           video: videoPath,
           imageFormat: ImageFormat.JPEG,
           timeMs: ms,
-          quality: 72,
+          quality: 80,
         );
         if (bytes == null) continue;
         framesAnalyzed++;
@@ -114,7 +114,9 @@ class BarbellVideoAnalyzer {
       );
     }
 
-    final span = (rawSamples.last.t - rawSamples.first.t).clamp(0.001, double.infinity);
+    rawSamples.sort((a, b) => a.t.compareTo(b.t));
+    final span =
+        (rawSamples.last.t - rawSamples.first.t).clamp(0.001, double.infinity);
     final fps = rawSamples.length / span;
     final smooth = smoothSamplesForFps(rawSamples, fps: fps);
 

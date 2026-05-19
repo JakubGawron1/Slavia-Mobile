@@ -14,6 +14,7 @@ import '../services/barbell_video_analyzer.dart';
 import '../ui/slavia_ui.dart';
 import '../utils/barbell_path_analysis.dart';
 import '../widgets/barbell_path_chart.dart';
+import '../widgets/barbell_video_overlay.dart';
 
 /// Analiza toru sztangi — Premium offline (ML Kit) + fallback WWW (MoveNet).
 class BarbellAnalysisScreen extends StatefulWidget {
@@ -34,6 +35,7 @@ class _BarbellAnalysisScreenState extends State<BarbellAnalysisScreen> {
   BarbellAnalysisResult? _lastResult;
   List<BarbellSessionRecord> _history = const [];
   String? _activeSessionId;
+  double _videoPositionSec = 0;
 
   @override
   void initState() {
@@ -44,8 +46,22 @@ class _BarbellAnalysisScreenState extends State<BarbellAnalysisScreen> {
     });
   }
 
+  void _onVideoTick() {
+    final c = _videoController;
+    if (c == null || !c.value.isInitialized || !mounted) return;
+    final sec = c.value.position.inMilliseconds / 1000.0;
+    if ((_videoPositionSec - sec).abs() < 0.02) return;
+    setState(() => _videoPositionSec = sec);
+  }
+
+  void _attachVideoListener(VideoPlayerController? controller) {
+    _videoController?.removeListener(_onVideoTick);
+    controller?.addListener(_onVideoTick);
+  }
+
   @override
   void dispose() {
+    _attachVideoListener(null);
     _videoController?.dispose();
     super.dispose();
   }
@@ -62,6 +78,7 @@ class _BarbellAnalysisScreenState extends State<BarbellAnalysisScreen> {
       maxDuration: const Duration(seconds: 45),
     );
     if (file == null || !mounted) return;
+    _attachVideoListener(null);
     await _videoController?.dispose();
     final controller = VideoPlayerController.file(File(file.path));
     await controller.initialize();
@@ -69,9 +86,11 @@ class _BarbellAnalysisScreenState extends State<BarbellAnalysisScreen> {
       await controller.dispose();
       return;
     }
+    _attachVideoListener(controller);
     setState(() {
       _videoFile = file;
       _videoController = controller..setLooping(true)..play();
+      _videoPositionSec = 0;
       _samples = const [];
       _lastResult = null;
       _analysisError = null;
@@ -341,7 +360,18 @@ class _BarbellAnalysisScreenState extends State<BarbellAnalysisScreen> {
               borderRadius: BorderRadius.circular(SlaviaUi.radiusMd),
               child: AspectRatio(
                 aspectRatio: _videoController!.value.aspectRatio,
-                child: VideoPlayer(_videoController!),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    VideoPlayer(_videoController!),
+                    if (_samples.length >= 2)
+                      BarbellVideoOverlay(
+                        samples: _samples,
+                        currentTimeSec: _videoPositionSec,
+                        barColor: primary,
+                      ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 10),

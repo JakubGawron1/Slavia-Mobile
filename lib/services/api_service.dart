@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../models/auth.dart';
+import '../models/login_api_exception.dart';
 import '../models/athlete.dart';
 import '../models/notification.dart';
 import '../models/competition.dart';
@@ -119,20 +120,28 @@ class ApiService {
   }
 
   // Auth
-  Future<AuthResponse> login(String username, String password) async {
+  Future<AuthResponse> login(
+    String username,
+    String password, {
+    String? totpCode,
+  }) async {
+    final code = totpCode?.trim();
     final response = await http.post(
       Uri.parse('$baseUrl/api/auth/login'),
       headers: _headers(null),
-      body: jsonEncode({'username': username, 'password': password}),
+      body: jsonEncode({
+        'username': username,
+        'password': password,
+        if (code != null && code.isNotEmpty) 'totp_code': code,
+      }),
     );
 
     if (response.statusCode == 200) {
       final authData = AuthResponse.fromJson(jsonDecode(response.body));
       await setToken(authData.token);
       return authData;
-    } else {
-      throw Exception('Failed to login: ${response.body}');
     }
+    throw LoginApiException.fromResponse(response.statusCode, response.body);
   }
 
   Future<AuthUser> getMe() async {

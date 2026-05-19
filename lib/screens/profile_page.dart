@@ -218,6 +218,26 @@ class _ProfilePageState extends State<ProfilePage> {
                   if (mounted) setState(() => _biometricUnlock = true);
                 },
               ),
+              ListTile(
+                leading: Icon(
+                  Icons.security_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                title: const Text('Dwuskładnikowe logowanie (2FA)'),
+                subtitle: Text(
+                  user?.totpEnabled == true
+                      ? 'Włączone na koncie — zarządzaj w profilu na stronie klubu.'
+                      : 'Nieaktywne — włącz TOTP w profilu na stronie WWW.',
+                ),
+                trailing: Icon(
+                  user?.totpEnabled == true
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  color: user?.totpEnabled == true
+                      ? Colors.green.shade600
+                      : Theme.of(context).colorScheme.outline,
+                ),
+              ),
             ]),
             const SizedBox(height: 24),
             _buildSection(context, 'Ustawienia konta', [
@@ -487,6 +507,25 @@ class _ProfilePageState extends State<ProfilePage> {
                                             fontSize: 15,
                                           ),
                                         ),
+                                        if (SlaviaAppearanceLabels.isExperimental(
+                                          preset,
+                                        ))
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 4,
+                                            ),
+                                            child: Text(
+                                              'Eksperymentalny',
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w800,
+                                                letterSpacing: 0.6,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .tertiary,
+                                              ),
+                                            ),
+                                          ),
                                         const SizedBox(height: 2),
                                         Text(
                                           SlaviaAppearanceLabels.subtitle(

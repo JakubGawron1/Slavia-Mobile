@@ -41,7 +41,7 @@ void main() async {
           value: PushNotificationService(),
         ),
       ],
-      child: const SlaviaApp(),
+      child: const AuthAppearanceSync(child: SlaviaApp()),
     ),
   );
 }
@@ -54,14 +54,49 @@ class SlaviaApp extends StatefulWidget {
 }
 
 class _SlaviaAppState extends State<SlaviaApp> {
-  /// Unikamy wielokrotnego synchronizowania tego samego stanu konta.
+  @override
+  Widget build(BuildContext context) {
+    return Selector<ThemeProvider, int>(
+      selector: (_, tp) =>
+          Object.hash(tp.themeMode, tp.preset, tp.outdoorCompetitionContrast),
+      builder: (context, appearanceRev, child) {
+        final themeProvider = context.read<ThemeProvider>();
+        return Selector<AuthProvider, bool>(
+          selector: (_, auth) => auth.isAuthenticated,
+          builder: (context, isAuthenticated, navChild) {
+            return MaterialApp(
+              title: 'CKS Slavia',
+              debugShowCheckedModeBanner: false,
+              theme: themeProvider.getTheme(false),
+              darkTheme: themeProvider.getTheme(true),
+              themeMode: themeProvider.themeMode,
+              home: isAuthenticated
+                  ? const BiometricGate(child: MainScreen())
+                  : const LoginScreen(),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+/// Synchronizacja motywu z `/api/auth/me` — poza drzewem `MaterialApp`, żeby nie przebudowywać całej aplikacji.
+class AuthAppearanceSync extends StatefulWidget {
+  const AuthAppearanceSync({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<AuthAppearanceSync> createState() => _AuthAppearanceSyncState();
+}
+
+class _AuthAppearanceSyncState extends State<AuthAppearanceSync> {
   String? _appearanceSig;
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-    final themeProvider = context.watch<ThemeProvider>();
-    final user = auth.user;
+    final user = context.select<AuthProvider, AuthUser?>((a) => a.user);
     if (user != null) {
       final sig =
           '${user.id}|${user.uiThemePreset ?? ''}|${user.uiColorMode ?? ''}';
@@ -69,23 +104,13 @@ class _SlaviaAppState extends State<SlaviaApp> {
         _appearanceSig = sig;
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           if (!mounted) return;
-          await themeProvider.syncFromAuthUser(user);
+          await context.read<ThemeProvider>().syncFromAuthUser(user);
         });
       }
     } else {
       _appearanceSig = null;
     }
-
-    return MaterialApp(
-      title: 'CKS Slavia',
-      debugShowCheckedModeBanner: false,
-      theme: themeProvider.getTheme(false),
-      darkTheme: themeProvider.getTheme(true),
-      themeMode: themeProvider.themeMode,
-      home: auth.isAuthenticated
-          ? const BiometricGate(child: MainScreen())
-          : const LoginScreen(),
-    );
+    return widget.child;
   }
 }
 
@@ -127,14 +152,17 @@ class AuthProvider extends ChangeNotifier {
     await _loadUser();
   }
 
-  Future<void> login(String username, String password) async {
+  Future<void> login(
+    String username,
+    String password, {
+    String? totpCode,
+  }) async {
     _isLoading = true;
     notifyListeners();
     try {
-      await _apiService.login(username, password);
+      await _apiService.login(username, password, totpCode: totpCode);
       _isAuthenticated = true;
       await _loadUser();
-      // Start polling for system notifications after login
       PushNotificationService().startPolling();
     } finally {
       _isLoading = false;

@@ -1,5 +1,23 @@
 # Changelog — Slavia Mobile
 
+## [0.9.10+10] — 2026-05-19 (tag `v0.9.10-dev`)
+
+### Nowe funkcje
+- **2FA (TOTP)** — drugi krok logowania z kodem z aplikacji authenticator (`totp_code`), jak na stronie WWW.
+- **Motywy eksperymentalne** — presety `glass`, `sport-tech`, `neon-brutalism` zsynchronizowane z frontendem.
+- **Analiza sztangi** — tor rysowany na wideo podczas odtwarzania; gęstsze próbkowanie klatek ML Kit (do 72).
+- **Skaner QR obecności** — pełnoekranowa kamera z ramką, narożnikami i animowaną linią skanowania.
+
+### Ulepszenia
+- **Wydajność startu** — `Selector` / `AuthAppearanceSync` ograniczają niepotrzebne przebudowy `MaterialApp`.
+- **Android signing** — opcjonalny release keystore z env (`ANDROID_KEYSTORE_*`); dokumentacja `docs/android-signing.md`.
+- **CI** — workflow Release APK obsługuje sekret `ANDROID_KEYSTORE_BASE64` dla spójnego podpisu.
+
+### Instalacja
+Pobierz APK z [GitHub Releases](https://github.com/JakubGawron1/Slavia-Mobile/releases) (tag `v0.9.10-dev`) lub zsynchronizuj wydanie w panelu admina witryny.
+
+---
+
 ## [0.9.6+7] — 2026-05-18 (tag `v0.9.6-dev`)
 
 ### Nowe funkcje

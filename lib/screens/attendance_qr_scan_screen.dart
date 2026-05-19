@@ -4,6 +4,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 
 import '../services/api_service.dart';
+import '../widgets/qr_scan_overlay.dart';
 
 /// Skaner QR obecności — tylko dla zalogowanego zawodnika.
 class AttendanceQrScanScreen extends StatefulWidget {
@@ -74,48 +75,78 @@ class _AttendanceQrScanScreenState extends State<AttendanceQrScanScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final today = DateFormat('dd.MM.yyyy').format(DateTime.now());
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
         title: const Text('Skaner obecności'),
         centerTitle: true,
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
       ),
-      body: Column(
+      body: Stack(
+        fit: StackFit.expand,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Text(
-              'Skieruj aparat na kod QR w sali. Data treningu: dzisiejsza (${DateFormat('dd.MM.yyyy').format(DateTime.now())}).',
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
+          MobileScanner(
+            controller: _controller,
+            onDetect: _onDetect,
           ),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: MobileScanner(
-                controller: _controller,
-                onDetect: _onDetect,
-              ),
-            ),
+          const QrScanOverlay(
+            hint: 'Skieruj kod QR w sali na ramkę. Data treningu: dzisiaj.',
           ),
-          if (_lastMessage != null)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                _lastMessage!,
-                style: TextStyle(
-                  color: _success ? cs.primary : cs.error,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
           if (_busy)
-            const Padding(
-              padding: EdgeInsets.only(bottom: 24),
-              child: CircularProgressIndicator(),
+            Container(
+              color: Colors.black45,
+              alignment: Alignment.center,
+              child: const CircularProgressIndicator(color: Colors.white),
             ),
-          const SizedBox(height: 16),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SafeArea(
+              minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Data treningu: $today',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  if (_lastMessage != null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: (_success ? cs.primary : cs.error)
+                            .withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: (_success ? cs.primary : cs.error)
+                              .withValues(alpha: 0.45),
+                        ),
+                      ),
+                      child: Text(
+                        _lastMessage!,
+                        style: TextStyle(
+                          color: _success ? cs.primary : cs.error,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );

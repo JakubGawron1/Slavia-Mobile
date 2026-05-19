@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/secure_credentials_store.dart';
+import '../models/login_api_exception.dart';
 import '../main.dart';
 import '../ui/slavia_ui.dart';
 import '../utils/network_feedback.dart';
@@ -20,12 +21,32 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _totpController = TextEditingController();
   bool _obscurePassword = true;
+  bool _totpStep = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameController.addListener(_resetTotpStep);
+    _passwordController.addListener(_resetTotpStep);
+  }
+
+  void _resetTotpStep() {
+    if (!_totpStep) return;
+    setState(() {
+      _totpStep = false;
+      _totpController.clear();
+    });
+  }
 
   @override
   void dispose() {
+    _usernameController.removeListener(_resetTotpStep);
+    _passwordController.removeListener(_resetTotpStep);
     _usernameController.dispose();
     _passwordController.dispose();
+    _totpController.dispose();
     super.dispose();
   }
 
@@ -151,6 +172,32 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                             ),
+                            if (_totpStep) ...[
+                              const SizedBox(height: 14),
+                              Text(
+                                'Dwuskładnikowe logowanie (2FA)',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: cs.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _totpController,
+                                keyboardType: TextInputType.number,
+                                textInputAction: TextInputAction.done,
+                                maxLength: 8,
+                                autocorrect: false,
+                                onSubmitted: (_) => _tryLogin(context, auth),
+                                style: GoogleFonts.outfit(fontSize: 16),
+                                decoration: SlaviaUi.filledField(
+                                  context,
+                                  label: 'Kod z aplikacji authenticator',
+                                  prefixIcon: Icons.pin_outlined,
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 22),
                             Row(
                               children: [
@@ -285,21 +332,42 @@ class _LoginScreenState extends State<LoginScreen> {
     FocusScope.of(context).unfocus();
     final u = _usernameController.text.trim();
     final p = _passwordController.text;
+    final totp = _totpStep ? _totpController.text.trim() : null;
     try {
-      await auth.login(u, p);
+      await auth.login(u, p, totpCode: totp);
       await SecureCredentialsStore.instance.writeLoginCredentials(u, p);
+    } on LoginApiException catch (e) {
+      if (!e.isTotpRequired || _totpStep) {
+        if (context.mounted) _showLoginError(context, e.message);
+        return;
+      }
+      if (!context.mounted) return;
+      setState(() => _totpStep = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            'Wymagane dwuskładnikowe logowanie — wpisz 6-cyfrowy kod z aplikacji authenticator.',
+            style: GoogleFonts.outfit(),
+          ),
+        ),
+      );
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text(
-              'Błąd logowania: ${friendlyNetworkError(e)}',
-              style: GoogleFonts.outfit(),
-            ),
-          ),
-        );
+        _showLoginError(context, friendlyNetworkError(e));
       }
     }
+  }
+
+  void _showLoginError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        content: Text(
+          'Błąd logowania: $message',
+          style: GoogleFonts.outfit(),
+        ),
+      ),
+    );
   }
 }

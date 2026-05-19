@@ -17,6 +17,9 @@ enum SlaviaPreset {
   ruby,
   neon,
   blackgym,
+  glass,
+  sportTech,
+  neonBrutalism,
 }
 
 /// Metadane jak na stronie (`useSlaviaAppearance.ts`).
@@ -34,6 +37,9 @@ abstract final class SlaviaAppearanceLabels {
         SlaviaPreset.ruby => 'Ruby podium',
         SlaviaPreset.neon => 'Neon gym',
         SlaviaPreset.blackgym => 'Black gym',
+        SlaviaPreset.glass => 'Glassmorphism',
+        SlaviaPreset.sportTech => 'Sport-Tech (Arena)',
+        SlaviaPreset.neonBrutalism => 'Neon Brutalism · Sport-Tech',
       };
 
   static String subtitle(SlaviaPreset p) => switch (p) {
@@ -57,6 +63,20 @@ abstract final class SlaviaAppearanceLabels {
           'Jaskrawe neony i energia siłowni — widoczna zmiana.',
         SlaviaPreset.blackgym =>
           'Czarna sala jako kolor przewodni — kontrast i spokój.',
+        SlaviaPreset.glass =>
+          'Przezroczyste karty, rozmycie i delikatne obramowania — eksperymentalny układ.',
+        SlaviaPreset.sportTech =>
+          'Futurystyczna arena — ciemny grafit z neonowym cyjanem.',
+        SlaviaPreset.neonBrutalism =>
+          'Brutalizm z grubymi obrysami — neon magenta/cyjan/lime.',
+      };
+
+  static bool isExperimental(SlaviaPreset p) => switch (p) {
+        SlaviaPreset.glass ||
+        SlaviaPreset.sportTech ||
+        SlaviaPreset.neonBrutalism =>
+          true,
+        _ => false,
       };
 
   /// Kolejność jak w panelu „Profil” na WWW.
@@ -71,6 +91,9 @@ abstract final class SlaviaAppearanceLabels {
     SlaviaPreset.ruby,
     SlaviaPreset.neon,
     SlaviaPreset.blackgym,
+    SlaviaPreset.glass,
+    SlaviaPreset.sportTech,
+    SlaviaPreset.neonBrutalism,
   ];
 }
 
@@ -182,6 +205,8 @@ class ThemeProvider with ChangeNotifier {
         ? _outdoorCompetitionColors()
         : _getPresetColors(_preset, isDark);
     final baseTheme = isDark ? ThemeData.dark() : ThemeData.light();
+    final cardRadius = _preset == SlaviaPreset.neonBrutalism ? 2.0 : 20.0;
+    final buttonRadius = _preset == SlaviaPreset.neonBrutalism ? 2.0 : 14.0;
 
     final baseScheme = ColorScheme.fromSeed(
       seedColor: colors.primary,
@@ -220,10 +245,13 @@ class ThemeProvider with ChangeNotifier {
       ),
       cardTheme: CardThemeData(
         color: colors.card,
-        elevation: 0,
+        elevation: _preset == SlaviaPreset.neonBrutalism ? 0 : 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: outline),
+          borderRadius: BorderRadius.circular(cardRadius),
+          side: BorderSide(
+            color: outline,
+            width: _preset == SlaviaPreset.neonBrutalism ? 2.5 : 1,
+          ),
         ),
       ),
       pageTransitionsTheme: PageTransitionsTheme(
@@ -239,13 +267,15 @@ class ThemeProvider with ChangeNotifier {
       dividerTheme: DividerThemeData(color: outline.withValues(alpha: 0.65)),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(buttonRadius),
+        ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(buttonRadius),
           ),
         ),
       ),
@@ -397,6 +427,69 @@ class ThemeProvider with ChangeNotifier {
           card: isDark ? const Color(0xFF141414) : Colors.white,
           onSurface: isDark ? Colors.white : const Color(0xFF020617),
         );
+      case SlaviaPreset.glass:
+        return _PresetColors(
+          primary: isDark
+              ? const Color(0xFFA78BFA)
+              : const Color(0xFF8B5CF6),
+          secondary: isDark
+              ? const Color(0xFF8B5CF6)
+              : const Color(0xFF7C3AED),
+          background: isDark
+              ? const Color(0xFF0A0A12)
+              : const Color(0xFFEEF2FF),
+          surface: isDark
+              ? const Color(0xFF1A1A2E)
+              : const Color(0xFFF5F7FF),
+          card: isDark
+              ? const Color(0xFF12121F)
+              : const Color(0xFFF8FAFF),
+          onSurface: isDark
+              ? const Color(0xFFF1F5F9)
+              : const Color(0xFF334155),
+        );
+      case SlaviaPreset.sportTech:
+        return _PresetColors(
+          primary: isDark
+              ? const Color(0xFF22D3EE)
+              : const Color(0xFF2563EB),
+          secondary: isDark
+              ? const Color(0xFF06B6D4)
+              : const Color(0xFF1D4ED8),
+          background: isDark
+              ? const Color(0xFF050810)
+              : const Color(0xFFF2F5F9),
+          surface: isDark
+              ? const Color(0xFF0D1422)
+              : const Color(0xFFFAFBFD),
+          card: isDark
+              ? const Color(0xFF0A101C)
+              : Colors.white,
+          onSurface: isDark
+              ? const Color(0xFFE2E8F0)
+              : const Color(0xFF1E293B),
+        );
+      case SlaviaPreset.neonBrutalism:
+        return _PresetColors(
+          primary: isDark
+              ? const Color(0xFF22D3EE)
+              : const Color(0xFF84CC16),
+          secondary: isDark
+              ? const Color(0xFFE879F9)
+              : const Color(0xFF0A0A0A),
+          background: isDark
+              ? const Color(0xFF0C0C0E)
+              : const Color(0xFFF2F0EA),
+          surface: isDark
+              ? const Color(0xFF18181C)
+              : const Color(0xFFFAF9F5),
+          card: isDark
+              ? const Color(0xFF141418)
+              : const Color(0xFFFAF9F5),
+          onSurface: isDark
+              ? const Color(0xFFF4F4F5)
+              : const Color(0xFF0A0A0A),
+        );
     }
   }
 
@@ -423,6 +516,12 @@ class ThemeProvider with ChangeNotifier {
         return SlaviaPreset.neon;
       case 'blackgym':
         return SlaviaPreset.blackgym;
+      case 'glass':
+        return SlaviaPreset.glass;
+      case 'sport-tech':
+        return SlaviaPreset.sportTech;
+      case 'neon-brutalism':
+        return SlaviaPreset.neonBrutalism;
       default:
         return null;
     }
@@ -439,6 +538,9 @@ class ThemeProvider with ChangeNotifier {
         SlaviaPreset.ruby => 'ruby',
         SlaviaPreset.neon => 'neon',
         SlaviaPreset.blackgym => 'blackgym',
+        SlaviaPreset.glass => 'glass',
+        SlaviaPreset.sportTech => 'sport-tech',
+        SlaviaPreset.neonBrutalism => 'neon-brutalism',
       };
 
   static ThemeMode _parseMode(String? raw) {
