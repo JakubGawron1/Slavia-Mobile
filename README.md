@@ -27,6 +27,14 @@ Workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) buduje
 
 Artefakt domyślny: `build/app/outputs/flutter-apk/app-release.apk` — strona klubu może linkować do najnowszego release przez API (patrz `NUXT_PUBLIC_MOBILE_GITHUB_REPO` w repozytorium frontendu).
 
+## Slavia-shared
+
+Logika i katalogi współdzielone z WWW (`../Slavia-shared`):
+
+- paczka `slavia_shared` w `pubspec.yaml` (`path: ../Slavia-shared/dart`)
+- Sinclair, odznaki, domyślne URL — z `@slavia/shared`
+- testy wektorów: `cd ../Slavia-shared/dart && flutter test`
+
 ## Spójność z frontendem (WWW)
 
 - Motyw domyślny **Slavia** (zieleń + slate) i font **Outfit** — zbliżone do strony Nuxt ([produkcja](https://cksslavia.vercel.app/)).

@@ -1,3 +1,5 @@
+import 'package:slavia_shared/brand_defaults.dart';
+
 /// Bazowy URL API (bez końcowego `/`).
 /// Nadpisz przy buildzie / run: `--dart-define=SLAVIA_API_BASE=https://twoj-backend.example.com`
 abstract final class ApiBase {
@@ -5,12 +7,12 @@ abstract final class ApiBase {
 
   static const String url = String.fromEnvironment(
     'SLAVIA_API_BASE',
-    defaultValue: 'https://slavia-backend.onrender.com',
+    defaultValue: SlaviaBrandDefaults.apiBase,
   );
 
   static String get normalized {
     final t = url.trim();
-    if (t.isEmpty) return 'https://slavia-backend.onrender.com';
+    if (t.isEmpty) return SlaviaBrandDefaults.apiBase;
     return t.endsWith('/') ? t.substring(0, t.length - 1) : t;
   }
 }

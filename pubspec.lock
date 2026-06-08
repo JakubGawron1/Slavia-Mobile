@@ -877,6 +877,13 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  slavia_shared:
+    dependency: "direct main"
+    description:
+      path: "../Slavia-shared/dart"
+      relative: true
+    source: path
+    version: "1.0.0"
   source_span:
     dependency: transitive
     description:

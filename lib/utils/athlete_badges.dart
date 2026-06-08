@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:slavia_shared/athlete_badge_catalog.dart';
+import 'package:slavia_shared/badge_helpers.dart';
 
 import '../models/athlete.dart';
 import 'sinclair_utils.dart';
 
-/// Odznaki zawodnika — ta sama logika co `AthleteBadges.vue` na WWW.
+/// Odznaki zawodnika — metadane z `@slavia/shared`, logika poziomów współdzielona.
 class AthleteBadgeDef {
   final String id;
   final String label;
@@ -25,25 +27,13 @@ class AthleteBadgeDef {
     required this.unit,
   });
 
-  int get level {
-    var l = 0;
-    for (final t in thresholds) {
-      if (current >= t) l++;
-    }
-    return l;
-  }
+  int get level => getBadgeLevel(BadgeThresholds(thresholds: thresholds, current: current));
 
-  double get progressPercent {
-    final lv = level;
-    if (lv >= thresholds.length) return 100;
-    final prev = lv == 0 ? 0.0 : thresholds[lv - 1];
-    final next = thresholds[lv];
-    if (next <= prev) return 100;
-    return ((current - prev) / (next - prev) * 100).clamp(0, 100);
-  }
+  double get progressPercent =>
+      getBadgeProgressPercent(BadgeThresholds(thresholds: thresholds, current: current));
 
   double? get nextThreshold =>
-      level < thresholds.length ? thresholds[level] : null;
+      getNextBadgeThreshold(BadgeThresholds(thresholds: thresholds, current: current));
 }
 
 SinclairGender? _gender(Athlete a) {
@@ -58,61 +48,47 @@ double _sinclair(Athlete a) {
   final bw = a.bodyweight;
   final t = a.totalKg;
   if (g == null || bw == null || bw <= 0 || t == null || t <= 0) return 0;
-  return SinclairCalculator.calculateTotal(t, bw, g);
+  final v = SinclairCalculator.calculateTotal(t, bw, g);
+  return v.isNaN ? 0 : v;
+}
+
+double _currentForBadge(String id, Athlete athlete, int presentCount) {
+  return switch (id) {
+    'sinclair' => _sinclair(athlete),
+    'total' => athlete.totalKg ?? 0,
+    'snatch' => athlete.bestSnatchKg ?? 0,
+    'cj' => athlete.bestCleanJerkKg ?? 0,
+    'trainings' => presentCount.toDouble(),
+    _ => 0,
+  };
+}
+
+(IconData, Color) _iconForBadge(String id) {
+  return switch (id) {
+    'sinclair' => (Icons.emoji_events_outlined, Colors.amber),
+    'total' => (Icons.fitness_center_rounded, Colors.green),
+    'snatch' => (Icons.bolt_rounded, Colors.teal),
+    'cj' => (Icons.local_fire_department_rounded, Colors.deepOrange),
+    'trainings' => (Icons.calendar_month_rounded, Colors.blue),
+    _ => (Icons.star_outline, Colors.grey),
+  };
 }
 
 List<AthleteBadgeDef> buildAthleteBadges(Athlete athlete, {int presentCount = 0}) {
   return [
-    AthleteBadgeDef(
-      id: 'sinclair',
-      label: 'Mistrz Sinclaira',
-      description:
-          'Punkty Sinclair wyliczane na podstawie masy ciała i wyniku w dwuboju.',
-      icon: Icons.emoji_events_outlined,
-      accent: Colors.amber,
-      current: _sinclair(athlete),
-      thresholds: const [100, 200, 300, 400],
-      unit: 'pkt',
-    ),
-    AthleteBadgeDef(
-      id: 'total',
-      label: 'Siła dwuboju',
-      description: 'Suma najlepszego rwania i podrzutu.',
-      icon: Icons.fitness_center_rounded,
-      accent: Colors.green,
-      current: athlete.totalKg ?? 0,
-      thresholds: const [100, 200, 300, 400],
-      unit: 'kg',
-    ),
-    AthleteBadgeDef(
-      id: 'snatch',
-      label: 'Technika rwania',
-      description: 'Twój najlepszy wynik w rwaniu.',
-      icon: Icons.bolt_rounded,
-      accent: Colors.teal,
-      current: athlete.bestSnatchKg ?? 0,
-      thresholds: const [50, 90, 100, 120, 150],
-      unit: 'kg',
-    ),
-    AthleteBadgeDef(
-      id: 'cj',
-      label: 'Moc podrzutu',
-      description: 'Twój najlepszy wynik w podrzucie.',
-      icon: Icons.local_fire_department_rounded,
-      accent: Colors.deepOrange,
-      current: athlete.bestCleanJerkKg ?? 0,
-      thresholds: const [70, 90, 100, 120, 150, 170, 200],
-      unit: 'kg',
-    ),
-    AthleteBadgeDef(
-      id: 'trainings',
-      label: 'Staż w klubie',
-      description: 'Ilość obecności na treningach w systemie.',
-      icon: Icons.calendar_month_rounded,
-      accent: Colors.blue,
-      current: presentCount.toDouble(),
-      thresholds: const [10, 50, 100, 250, 500],
-      unit: 'sesji',
-    ),
+    for (final meta in AthleteBadgeCatalog.badges)
+      () {
+        final (icon, accent) = _iconForBadge(meta.id);
+        return AthleteBadgeDef(
+          id: meta.id,
+          label: meta.label,
+          description: meta.description,
+          icon: icon,
+          accent: accent,
+          current: _currentForBadge(meta.id, athlete, presentCount),
+          thresholds: meta.thresholds,
+          unit: meta.unit,
+        );
+      }(),
   ];
 }

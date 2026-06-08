@@ -1,3 +1,4 @@
+import 'package:slavia_shared/brand_defaults.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Publiczny frontend Nuxt. Domyślnie produkcja: https://cksslavia.vercel.app/
@@ -7,7 +8,7 @@ abstract final class AppBrand {
 
   static const String _raw = String.fromEnvironment(
     'SLAVIA_WEB_URL',
-    defaultValue: 'https://cksslavia.vercel.app',
+    defaultValue: SlaviaBrandDefaults.webUrl,
   );
 
   static Uri? get publicSiteUri {
