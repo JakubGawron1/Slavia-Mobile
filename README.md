@@ -29,11 +29,16 @@ Artefakt domyślny: `build/app/outputs/flutter-apk/app-release.apk` — strona k
 
 ## Slavia-shared
 
-Logika i katalogi współdzielone z WWW (`../Slavia-shared`):
+Lokalnie: osobny klon `../Slavia-shared` (ten sam co WWW). Produkcja WWW używa submodule w frontendzie.
 
-- paczka `slavia_shared` w `pubspec.yaml` (`path: ../Slavia-shared/dart`)
-- Sinclair, odznaki, domyślne URL — z `@slavia/shared`
+```
+Desktop/
+  Slavia-shared/        ← edycja shared
+  Slavia-mobile/        → path: ../Slavia-shared/dart
+```
+
 - testy wektorów: `cd ../Slavia-shared/dart && flutter test`
+- **CI (Release APK):** shallow clone `main` z `JakubGawron1/Slavia-shared` (zawsze latest commit)
 
 ## Spójność z frontendem (WWW)
 

@@ -1,0 +1,35 @@
+# CI + reakcja na push Slavia-shared (repository_dispatch).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  repository_dispatch:
+    types: [slavia-shared-updated]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout Slavia-shared (latest main)
+        run: |
+          DEST="${GITHUB_WORKSPACE}/../Slavia-shared"
+          rm -rf "$DEST"
+          git clone --depth 1 --branch main https://github.com/JakubGawron1/Slavia-shared.git "$DEST"
+          echo "Slavia-shared @ $(git -C "$DEST" rev-parse HEAD)"
+
+      - name: Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - name: Shared vector tests
+        working-directory: ../Slavia-shared/dart
+        run: flutter test
