@@ -1,5 +1,16 @@
 # Changelog — Slavia Mobile
 
+## [0.9.112+112] — 2026-06-11 (tag `v0.9.112`)
+
+### Ulepszenia
+- **Zależności Flutter** — aktualizacja do najnowszych wersji: `go_router` 17.3, `flutter_local_notifications` 22, `package_info_plus` 10, `share_plus` 13, `timezone` 0.11 i powiązane pakiety transitive.
+- **Android** — refaktor `launchInstallForUri` w `MainActivity` (when zamiast zagnieżdżonych if).
+
+### Instalacja
+Pobierz APK z [GitHub Releases](https://github.com/JakubGawron1/Slavia-Mobile/releases) (tag `v0.9.112`) lub zsynchronizuj wydanie w panelu admina witryny.
+
+---
+
 ## [0.9.111+111] — 2026-06-11 (tag `v0.9.111`)
 
 ### Nowe funkcje

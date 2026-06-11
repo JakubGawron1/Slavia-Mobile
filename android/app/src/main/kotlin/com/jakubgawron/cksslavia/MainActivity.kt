@@ -407,18 +407,18 @@ class MainActivity : FlutterFragmentActivity() {
 
     private fun launchInstallForUri(uri: Uri): Pair<Boolean, String?> =
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-                !packageManager.canRequestPackageInstalls()
-            ) {
-                return false to
-                    "Włącz instalację z nieznanych źródeł dla CKS Slavia w ustawieniach Androida."
+            when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                    !packageManager.canRequestPackageInstalls() ->
+                    false to
+                        "Włącz instalację z nieznanych źródeł dla CKS Slavia w ustawieniach Androida."
+                isFinishing || isDestroyed ->
+                    false to "Aktywność niedostępna — otwórz plik slavia_update.apk z Pobranych."
+                else -> {
+                    startActivity(buildInstallIntent(uri))
+                    true to null
+                }
             }
-            val intent = buildInstallIntent(uri)
-            if (isFinishing || isDestroyed) {
-                return false to "Aktywność niedostępna — otwórz plik slavia_update.apk z Pobranych."
-            }
-            startActivity(intent)
-            true to null
         } catch (e: ActivityNotFoundException) {
             val session =
                 tryPackageInstallerFromContentUri(uri) ||
