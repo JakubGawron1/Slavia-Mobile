@@ -4,17 +4,13 @@ import 'package:provider/provider.dart';
 
 import '../../main.dart';
 import '../../ui/slavia_ui.dart';
-import '../announcements_manage_screen.dart';
 import '../athlete_list_screen.dart';
 import '../athlete_portal_screen.dart';
-import '../audit_log_screen.dart';
 import '../calculators_page.dart';
 import '../competition_assignment_screen.dart';
 import '../profile_page.dart';
 import '../sinclair_calculator_page.dart';
 import '../proportions_calculator_page.dart';
-import '../superadmin_athlete_manager_screen.dart';
-import '../user_management_screen.dart';
 
 /// Zakładka „Więcej” — kalkulatory, kadra, administracja, profil.
 class MoreHubScreen extends StatelessWidget {
@@ -28,9 +24,6 @@ class MoreHubScreen extends StatelessWidget {
     final isStaff = roles.any(
       (r) => r == 'Trainer' || r == 'Admin' || r == 'SuperAdmin',
     );
-    final isClubAdmin =
-        roles.contains('Admin') || roles.contains('SuperAdmin');
-    final isSuper = roles.contains('SuperAdmin');
     final primary = Theme.of(context).colorScheme.primary;
 
     void push(Widget page) {
@@ -162,54 +155,6 @@ class MoreHubScreen extends StatelessWidget {
                     icon: Icons.assignment_ind_rounded,
                     accent: Colors.cyan,
                     onTap: () => push(const CompetitionAssignmentScreen()),
-                  ),
-                ],
-                if (isClubAdmin) ...[
-                  const SizedBox(height: 20),
-                  SlaviaUi.sectionHeader(
-                    context,
-                    'Administracja',
-                    accent: Colors.red,
-                    icon: Icons.admin_panel_settings_outlined,
-                  ),
-                  SlaviaUi.hubTile(
-                    context,
-                    title: 'Zarządzanie ogłoszeniami',
-                    subtitle: 'Publikacja dla klubu',
-                    icon: Icons.campaign_outlined,
-                    accent: Colors.red,
-                    onTap: () => push(const AnnouncementsManageScreen()),
-                  ),
-                  const SizedBox(height: 10),
-                  SlaviaUi.hubTile(
-                    context,
-                    title: 'Użytkownicy',
-                    subtitle: 'Konta w systemie',
-                    icon: Icons.manage_accounts_outlined,
-                    accent: Colors.red,
-                    onTap: () => push(const UserManagementScreen()),
-                  ),
-                ],
-                if (isClubAdmin) ...[
-                  const SizedBox(height: 10),
-                  SlaviaUi.hubTile(
-                    context,
-                    title: 'Zarządzanie zawodnikami',
-                    subtitle: 'Baza zawodników klubu',
-                    icon: Icons.people_rounded,
-                    accent: Colors.deepOrange,
-                    onTap: () => push(const SuperAdminAthleteManagerScreen()),
-                  ),
-                ],
-                if (isSuper) ...[
-                  const SizedBox(height: 10),
-                  SlaviaUi.hubTile(
-                    context,
-                    title: 'Dziennik audytu',
-                    subtitle: 'Logi systemowe',
-                    icon: Icons.history_rounded,
-                    accent: Colors.deepPurple,
-                    onTap: () => push(const AuditLogScreen()),
                   ),
                 ],
               ]),

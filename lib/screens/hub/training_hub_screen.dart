@@ -10,6 +10,7 @@ import '../barbell_analysis_screen.dart';
 import '../calendar_screen.dart';
 import '../recovery_journal_screen.dart';
 import '../training_log_screen.dart';
+import '../membership_payments_screen.dart';
 import '../trainer_training_plans_screen.dart';
 
 /// Zakładka „Treningi” — najczęstsze akcje zawodnika i kadry.
@@ -115,6 +116,15 @@ class TrainingHubScreen extends StatelessWidget {
                     icon: Icons.calendar_view_week_rounded,
                     accent: Colors.orange,
                     onTap: () => push(const AthleteTrainingPlansScreen()),
+                  ),
+                  const SizedBox(height: 10),
+                  SlaviaUi.hubTile(
+                    context,
+                    title: 'Składka klubowa',
+                    subtitle: 'Status wpłat i zgłoszenie przelewu',
+                    icon: Icons.payments_outlined,
+                    accent: Colors.green,
+                    onTap: () => push(const MembershipPaymentsScreen()),
                   ),
                   const SizedBox(height: 10),
                   SlaviaUi.hubTile(

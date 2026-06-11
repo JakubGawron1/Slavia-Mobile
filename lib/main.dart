@@ -9,6 +9,7 @@ import 'services/barbell_premium_service.dart';
 import 'services/notification_timezone.dart';
 import 'services/push_notification_service.dart';
 import 'services/secure_credentials_store.dart';
+import 'screens/banned_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'models/auth.dart';
@@ -61,18 +62,33 @@ class _SlaviaAppState extends State<SlaviaApp> {
           Object.hash(tp.themeMode, tp.preset, tp.outdoorCompetitionContrast),
       builder: (context, appearanceRev, child) {
         final themeProvider = context.read<ThemeProvider>();
-        return Selector<AuthProvider, bool>(
-          selector: (_, auth) => auth.isAuthenticated,
-          builder: (context, isAuthenticated, navChild) {
+        return Selector<AuthProvider, ({bool isAuthenticated, bool isBanned, String? bannedReason, bool isLoading})>(
+          selector: (_, auth) => (
+            isAuthenticated: auth.isAuthenticated,
+            isBanned: auth.user?.isBanned ?? false,
+            bannedReason: auth.user?.bannedReason,
+            isLoading: auth.isLoading && auth.user == null,
+          ),
+          builder: (context, authState, navChild) {
+            Widget home;
+            if (!authState.isAuthenticated) {
+              home = const LoginScreen();
+            } else if (authState.isLoading) {
+              home = const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            } else if (authState.isBanned) {
+              home = BannedScreen(reason: authState.bannedReason);
+            } else {
+              home = const BiometricGate(child: MainScreen());
+            }
             return MaterialApp(
               title: 'CKS Slavia',
               debugShowCheckedModeBanner: false,
               theme: themeProvider.getTheme(false),
               darkTheme: themeProvider.getTheme(true),
               themeMode: themeProvider.themeMode,
-              home: isAuthenticated
-                  ? const BiometricGate(child: MainScreen())
-                  : const LoginScreen(),
+              home: home,
             );
           },
         );
