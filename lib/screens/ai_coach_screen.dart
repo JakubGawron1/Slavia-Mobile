@@ -196,10 +196,15 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
                           : Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Text(
-                      isUser ? msg.content : plainChatMarkdown(msg.content),
-                      style: GoogleFonts.outfit(fontSize: 14, height: 1.4),
-                    ),
+                    child: isUser
+                        ? Text(
+                            msg.content,
+                            style: GoogleFonts.outfit(fontSize: 14, height: 1.4),
+                          )
+                        : ChatMarkdownText(
+                            msg.content,
+                            style: GoogleFonts.outfit(fontSize: 14, height: 1.4),
+                          ),
                   ),
                 );
               },

@@ -2,22 +2,20 @@ import 'dart:async';
 
 import 'package:app_badge_plus/app_badge_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/api_service.dart';
 import 'services/barbell_premium_service.dart';
 import 'services/notification_timezone.dart';
+import 'services/fcm_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/secure_credentials_store.dart';
-import 'screens/banned_screen.dart';
-import 'screens/browser_panel_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/main_screen.dart';
+import 'routing/app_router.dart';
 import 'models/auth.dart';
 import 'services/panel_navigation_service.dart';
 import 'utils/theme_preset_catalog.dart';
 import 'utils/theme_provider.dart';
-import 'widgets/biometric_gate.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
@@ -35,6 +33,7 @@ void main() async {
 
   // Init push notifications early so the plugin registers
   await PushNotificationService().init(apiService);
+  await FcmService.instance.init(apiService);
 
   runApp(
     MultiProvider(
@@ -61,6 +60,14 @@ class SlaviaApp extends StatefulWidget {
 }
 
 class _SlaviaAppState extends State<SlaviaApp> {
+  GoRouter? _router;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _router ??= createAppRouter(context.read<AuthProvider>());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Selector<ThemeProvider, int>(
@@ -68,42 +75,24 @@ class _SlaviaAppState extends State<SlaviaApp> {
           Object.hash(tp.themeMode, tp.preset, tp.outdoorCompetitionContrast),
       builder: (context, appearanceRev, child) {
         final themeProvider = context.read<ThemeProvider>();
-        return Selector<AuthProvider, ({bool isAuthenticated, bool isBanned, String? bannedReason, bool isLoading})>(
-          selector: (_, auth) => (
-            isAuthenticated: auth.isAuthenticated,
-            isBanned: auth.user?.isBanned ?? false,
-            bannedReason: auth.user?.bannedReason,
-            isLoading: auth.isLoading && auth.user == null,
-          ),
-          builder: (context, authState, navChild) {
-            Widget home;
-            if (!authState.isAuthenticated) {
-              home = const LoginScreen();
-            } else if (authState.isLoading) {
-              home = const Scaffold(
+        final auth = context.read<AuthProvider>();
+        final router = _router ??= createAppRouter(auth);
+        final loading = auth.isLoading && auth.user == null && auth.isAuthenticated;
+
+        return MaterialApp.router(
+          title: 'CKS Slavia',
+          debugShowCheckedModeBanner: false,
+          theme: themeProvider.getTheme(false),
+          darkTheme: themeProvider.getTheme(true),
+          themeMode: themeProvider.themeMode,
+          routerConfig: router,
+          builder: (context, child) {
+            if (loading) {
+              return const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               );
-            } else if (authState.isBanned) {
-              home = BannedScreen(reason: authState.bannedReason);
-            } else {
-              final user = context.read<AuthProvider>().user;
-              final roles = user?.roles ?? [];
-              final browserOnlyAdmin = (roles.contains('Admin') ||
-                      roles.contains('SuperAdmin')) &&
-                  !roles.contains('Athlete') &&
-                  !roles.contains('Trainer');
-              home = browserOnlyAdmin
-                  ? const BrowserPanelScreen()
-                  : const BiometricGate(child: MainScreen());
             }
-            return MaterialApp(
-              title: 'CKS Slavia',
-              debugShowCheckedModeBanner: false,
-              theme: themeProvider.getTheme(false),
-              darkTheme: themeProvider.getTheme(true),
-              themeMode: themeProvider.themeMode,
-              home: home,
-            );
+            return child ?? const SizedBox.shrink();
           },
         );
       },

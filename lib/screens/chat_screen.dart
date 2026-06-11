@@ -20,8 +20,9 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   static const _reactionEmojis = ['👍', '✅', '🔥', '💪'];
+  static const _messagePollInterval = Duration(seconds: 8);
 
   List<ChatThread> _threads = [];
   List<ChatMessage> _messages = [];
@@ -33,6 +34,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final _newThreadTitleCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   Timer? _presenceTimer;
+  Timer? _refreshTimer;
+  int _refreshTick = 0;
 
   bool _canStartThread(AuthUser? u) {
     final r = u?.roles ?? [];
@@ -44,8 +47,31 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadThreads();
     _startPresencePing();
+    _startAutoRefresh();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _startAutoRefresh();
+      unawaited(_pollMessages());
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _refreshTimer?.cancel();
+      _refreshTimer = null;
+    }
+  }
+
+  void _startAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(_messagePollInterval, (_) {
+      _refreshTick++;
+      unawaited(_pollMessages());
+      if (_refreshTick % 4 == 0) unawaited(_pollThreadsSilent());
+    });
   }
 
   void _startPresencePing() {
@@ -59,7 +85,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _presenceTimer?.cancel();
+    _refreshTimer?.cancel();
     _draftCtrl.dispose();
     _titleDraftCtrl.dispose();
     _newThreadTitleCtrl.dispose();
@@ -132,6 +160,47 @@ class _ChatScreenState extends State<ChatScreen> {
         ).showSnackBar(SnackBar(content: Text('Wiadomości: $e')));
       }
     }
+  }
+
+  Future<void> _pollThreadsSilent() async {
+    if (!mounted) return;
+    final api = Provider.of<ApiService>(context, listen: false);
+    try {
+      final list = await api.getChatThreads();
+      list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      if (!mounted) return;
+      setState(() {
+        _threads = list;
+        if (_activeThreadId != null &&
+            !_threads.any((t) => t.id == _activeThreadId)) {
+          _activeThreadId = _threads.isEmpty ? null : _threads.first.id;
+          _messages = [];
+        }
+      });
+      if (_activeThreadId != null) await _pollMessages();
+    } catch (_) {}
+  }
+
+  Future<void> _pollMessages() async {
+    final id = _activeThreadId;
+    if (id == null || !mounted) return;
+    final api = Provider.of<ApiService>(context, listen: false);
+    try {
+      final list = await api.getChatMessages(id);
+      if (!mounted) return;
+      final prevTail = _messages.isEmpty ? null : _messages.last.id;
+      final nextTail = list.isEmpty ? null : list.last.id;
+      final grew = list.length > _messages.length || prevTail != nextTail;
+      setState(() => _messages = list);
+      if (grew) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!_scrollCtrl.hasClients) return;
+          final max = _scrollCtrl.position.maxScrollExtent;
+          final dist = max - _scrollCtrl.offset;
+          if (dist < 140) _scrollCtrl.jumpTo(max);
+        });
+      }
+    } catch (_) {}
   }
 
   ChatThread? get _activeThread {
@@ -703,8 +772,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                                       color: cs.primary,
                                                     ),
                                                   ),
-                                                Text(
-                                                  plainChatMarkdown(m.body),
+                                                ChatMarkdownText(
+                                                  m.body,
                                                   style: GoogleFonts.outfit(
                                                     fontSize: 14,
                                                     height: 1.35,
