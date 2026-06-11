@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../main.dart';
 import '../services/api_service.dart';
+import '../services/api_service_ai_coach.dart';
 import '../utils/chat_markdown.dart';
 
 /// Trener AI — parity z WWW `OlympicCoachPanel` (bez załączników w v1 mobile).

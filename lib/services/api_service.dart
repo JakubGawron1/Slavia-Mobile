@@ -1144,42 +1144,4 @@ class ApiService {
   }
 
   // Trener AI (parity z WWW `/athlete/ai-coach`, `/trainer/ai-coach`)
-  Future<Map<String, dynamic>> getAiCoachStatus() async {
-    final token = await getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/ai/coach/status'),
-      headers: _headers(token),
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    }
-    throw Exception('Failed to load AI coach status');
-  }
-
-  Future<String> sendAiCoachChat({
-    required String message,
-    String mode = 'chat',
-    List<Map<String, String>> history = const [],
-    String? athleteId,
-    bool? useAthleteContext,
-  }) async {
-    final token = await getToken();
-    final body = <String, dynamic>{
-      'message': message,
-      'mode': mode,
-      'history': history,
-      'athlete_id': ?athleteId,
-      'use_athlete_context': ?useAthleteContext,
-    };
-    final response = await http.post(
-      Uri.parse('$baseUrl/api/ai/coach/chat'),
-      headers: _headers(token),
-      body: jsonEncode(body),
-    );
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return (data['reply'] as String?) ?? '';
-    }
-    throw Exception('AI coach chat failed: ${response.body}');
-  }
 }

@@ -14,6 +14,8 @@ import 'screens/browser_panel_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'models/auth.dart';
+import 'services/panel_navigation_service.dart';
+import 'utils/theme_preset_catalog.dart';
 import 'utils/theme_provider.dart';
 import 'widgets/biometric_gate.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -22,9 +24,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pl_PL', null);
   await ensureLocalTimezoneInitialized();
+  await ThemePresetCatalog.ensureLoaded();
   final prefs = await SharedPreferences.getInstance();
   final themeProvider = ThemeProvider(prefs);
   final apiService = ApiService();
+  final panelNav = PanelNavigationService(apiService);
   final barbellPremium = BarbellPremiumService();
   themeProvider.attachApi(apiService);
   final token = await apiService.getToken();
@@ -37,6 +41,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider.value(value: themeProvider),
         Provider<ApiService>.value(value: apiService),
+        Provider<PanelNavigationService>.value(value: panelNav),
         ChangeNotifierProvider(create: (_) => AuthProvider(apiService, token)),
         ChangeNotifierProvider.value(value: barbellPremium),
         Provider<PushNotificationService>.value(

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/auth.dart';
 import '../services/api_service.dart';
+import 'theme_preset_catalog.dart';
 
 /// Id presetów — zgodne z backendem i `SLAVIA_THEME_PRESETS` na WWW.
 enum SlaviaPreset {
@@ -26,7 +27,11 @@ enum SlaviaPreset {
 abstract final class SlaviaAppearanceLabels {
   SlaviaAppearanceLabels._();
 
-  static String title(SlaviaPreset p) => switch (p) {
+  static String title(SlaviaPreset p) {
+    final fromJson =
+        ThemePresetCatalog.labelForStorageId(ThemeProvider.presetToStorage(p));
+    if (fromJson != null && fromJson.isNotEmpty) return fromJson;
+    return switch (p) {
         SlaviaPreset.pink => 'Pink — zawodnik',
         SlaviaPreset.dark => 'Dark — zawodnik',
         SlaviaPreset.slavia => 'Slavia — sala klubu',
@@ -41,8 +46,14 @@ abstract final class SlaviaAppearanceLabels {
         SlaviaPreset.sportTech => 'Sport-Tech (Arena)',
         SlaviaPreset.neonBrutalism => 'Neon Brutalism · Sport-Tech',
       };
+  }
 
-  static String subtitle(SlaviaPreset p) => switch (p) {
+  static String subtitle(SlaviaPreset p) {
+    final fromJson = ThemePresetCatalog.descriptionForStorageId(
+      ThemeProvider.presetToStorage(p),
+    );
+    if (fromJson != null && fromJson.isNotEmpty) return fromJson;
+    return switch (p) {
         SlaviaPreset.pink =>
           'Akcent różowy dla kont zawodniczek (domyślnie wg płci).',
         SlaviaPreset.dark =>
@@ -70,14 +81,22 @@ abstract final class SlaviaAppearanceLabels {
         SlaviaPreset.neonBrutalism =>
           'Brutalizm z grubymi obrysami — neon magenta/cyjan/lime.',
       };
+  }
 
-  static bool isExperimental(SlaviaPreset p) => switch (p) {
+  static bool isExperimental(SlaviaPreset p) {
+    if (ThemePresetCatalog.isExperimentalStorageId(
+      ThemeProvider.presetToStorage(p),
+    )) {
+      return true;
+    }
+    return switch (p) {
         SlaviaPreset.glass ||
         SlaviaPreset.sportTech ||
         SlaviaPreset.neonBrutalism =>
           true,
         _ => false,
       };
+  }
 
   /// Kolejność jak w panelu „Profil” na WWW.
   static const List<SlaviaPreset> displayOrder = [
