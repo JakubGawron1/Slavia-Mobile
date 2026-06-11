@@ -10,6 +10,7 @@ import '../models/competition.dart';
 import '../services/api_service.dart';
 import '../services/app_shortcuts_service.dart';
 import '../services/app_update_service.dart';
+import '../services/panel_navigation_service.dart';
 import '../services/push_notification_service.dart';
 import '../utils/app_shortcuts_bridge.dart';
 import '../navigation/app_drawer.dart';
@@ -35,6 +36,9 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+      unawaited(
+        Provider.of<PanelNavigationService>(context, listen: false).refresh(),
+      );
       await AppShortcutsService.instance.ensureInitialized();
       if (!mounted) return;
       unawaited(_syncAthleteShortcutCalendarHint());

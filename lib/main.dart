@@ -40,7 +40,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider.value(value: themeProvider),
         Provider<ApiService>.value(value: apiService),
-        Provider<PanelNavigationService>.value(value: panelNav),
+        ChangeNotifierProvider<PanelNavigationService>.value(value: panelNav),
         ChangeNotifierProvider(create: (_) => AuthProvider(apiService, token)),
         ChangeNotifierProvider.value(value: barbellPremium),
         Provider<PushNotificationService>.value(

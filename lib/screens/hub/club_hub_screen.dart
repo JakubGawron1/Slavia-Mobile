@@ -4,9 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/app_brand.dart';
+import '../../main.dart';
 import '../../models/announcement.dart';
 import '../../services/api_service.dart';
+import '../../services/panel_navigation_service.dart';
 import '../../ui/slavia_ui.dart';
+import '../../utils/panel_navigation_catalog.dart';
 import '../announcement_page.dart';
 import '../club_challenges_screen.dart';
 import '../club_gallery_screen.dart';
@@ -19,9 +22,33 @@ class ClubHubScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Consumer<PanelNavigationService>(
+      builder: (context, panelNav, _) => _ClubHubBody(panelNav: panelNav),
+    );
+  }
+}
+
+class _ClubHubBody extends StatelessWidget {
+  const _ClubHubBody({required this.panelNav});
+
+  final PanelNavigationService panelNav;
+
+  @override
+  Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final primary = cs.primary;
     final api = Provider.of<ApiService>(context, listen: false);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final roles = auth.user?.roles ?? [];
+    final isStaff = roles.any(
+      (r) => r == 'Trainer' || r == 'Admin' || r == 'SuperAdmin',
+    );
+    final rankingFlag = isStaff
+        ? PanelNavigationCatalog.trainerRanking
+        : PanelNavigationCatalog.athleteRanking;
+    final wyzwaniaFlag = isStaff
+        ? PanelNavigationCatalog.trainerWyzwania
+        : PanelNavigationCatalog.athleteWyzwania;
 
     void push(Widget page) {
       Navigator.push<void>(
@@ -200,23 +227,26 @@ class ClubHubScreen extends StatelessWidget {
                   onTap: () => push(const ClubGalleryScreen()),
                 ),
                 const SizedBox(height: 10),
-                SlaviaUi.hubTile(
-                  context,
-                  title: 'Ranking Sinclair',
-                  subtitle: 'Publiczna lista elity — jak na stronie',
-                  icon: Icons.leaderboard_rounded,
-                  accent: Colors.deepOrange,
-                  onTap: () => push(const PublicRankingScreen()),
-                ),
-                const SizedBox(height: 10),
-                SlaviaUi.hubTile(
-                  context,
-                  title: 'Wyzwania klubu',
-                  subtitle: 'Aktywność w dzienniku treningów',
-                  icon: Icons.emoji_events_outlined,
-                  accent: Colors.purple,
-                  onTap: () => push(const ClubChallengesScreen()),
-                ),
+                if (panelNav.isModuleEnabled(rankingFlag)) ...[
+                  SlaviaUi.hubTile(
+                    context,
+                    title: 'Ranking Sinclair',
+                    subtitle: 'Publiczna lista elity — jak na stronie',
+                    icon: Icons.leaderboard_rounded,
+                    accent: Colors.deepOrange,
+                    onTap: () => push(const PublicRankingScreen()),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                if (panelNav.isModuleEnabled(wyzwaniaFlag))
+                  SlaviaUi.hubTile(
+                    context,
+                    title: 'Wyzwania klubu',
+                    subtitle: 'Aktywność w dzienniku treningów',
+                    icon: Icons.emoji_events_outlined,
+                    accent: Colors.purple,
+                    onTap: () => push(const ClubChallengesScreen()),
+                  ),
                 if (AppBrand.hasPublicSite) ...[
                   const SizedBox(height: 10),
                   SlaviaUi.hubTile(

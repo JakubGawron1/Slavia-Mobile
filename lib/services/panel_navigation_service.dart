@@ -1,10 +1,12 @@
+import 'package:flutter/foundation.dart';
+
 import 'api_service.dart';
 import 'api_service_public_ext.dart';
 
 const panelNavFlagPrefix = 'panel_nav_';
 
 /// Cache flag nawigacji panelu (parity z `usePanelNavigationFlags` na WWW).
-class PanelNavigationService {
+class PanelNavigationService extends ChangeNotifier {
   PanelNavigationService(this._api);
 
   final ApiService _api;
@@ -37,6 +39,7 @@ class PanelNavigationService {
       }
       _global = next;
       _loadedAt = DateTime.now();
+      notifyListeners();
     } catch (_) {
       // offline — zostaw poprzedni cache lub domyślne włączone
     }
