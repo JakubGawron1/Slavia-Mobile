@@ -195,10 +195,6 @@ class ApiService {
     }
   }
 
-  Future<void> _invalidateAthletesPublicCache() async {
-    PublicApiCache.instance.invalidate('/api/athletes');
-  }
-
   Future<Athlete> getAthlete(String id) async {
     final token = await getToken();
     final response = await http.get(
@@ -407,95 +403,6 @@ class ApiService {
     }
   }
 
-  /// Admin / SuperAdmin — pełna lista (nieopublikowane, kolejność).
-  Future<List<Announcement>> getAnnouncementsManage() async {
-    final token = await getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/announcements/manage'),
-      headers: _headers(token),
-    );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((item) => Announcement.fromJson(item)).toList();
-    }
-    throw Exception('announcements_manage_failed');
-  }
-
-  Future<Announcement> createAnnouncement({
-    required String title,
-    required String body,
-    bool? pinned,
-    int? sortOrder,
-    bool? published,
-  }) async {
-    final token = await getToken();
-    final payload = <String, dynamic>{
-      'title': title.trim(),
-      'body': body,
-      'pinned': ?pinned,
-      'sort_order': ?sortOrder,
-      'published': ?published,
-    };
-    final response = await http.post(
-      Uri.parse('$baseUrl/api/announcements'),
-      headers: _headers(token),
-      body: jsonEncode(payload),
-    );
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      PublicApiCache.instance.invalidate('/api/announcements');
-      return Announcement.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>,
-      );
-    }
-    throw Exception('create_announcement_failed');
-  }
-
-  Future<Announcement> updateAnnouncement(
-    String id, {
-    required String title,
-    required String body,
-    bool? pinned,
-    int? sortOrder,
-    bool? published,
-  }) async {
-    final token = await getToken();
-    final payload = <String, dynamic>{
-      'title': title.trim(),
-      'body': body,
-      'pinned': ?pinned,
-      'sort_order': ?sortOrder,
-      'published': ?published,
-    };
-    final response = await http.patch(
-      Uri.parse('$baseUrl/api/announcements/${Uri.encodeComponent(id)}'),
-      headers: _headers(token),
-      body: jsonEncode(payload),
-    );
-
-    if (response.statusCode == 200) {
-      PublicApiCache.instance.invalidate('/api/announcements');
-      return Announcement.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>,
-      );
-    }
-    throw Exception('update_announcement_failed');
-  }
-
-  Future<void> deleteAnnouncement(String id) async {
-    final token = await getToken();
-    final response = await http.delete(
-      Uri.parse('$baseUrl/api/announcements/${Uri.encodeComponent(id)}'),
-      headers: _headers(token),
-    );
-
-    if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('delete_announcement_failed');
-    }
-    PublicApiCache.instance.invalidate('/api/announcements');
-  }
-
   /// Wpisy aktualności z WWW (`/aktualnosci`) — publiczna lista z API.
   Future<List<ClubPost>> getClubPosts() async {
     final response = await _getCachedPublic('/api/posts');
@@ -566,38 +473,6 @@ class ApiService {
 
     if (response.statusCode != 201 && response.statusCode != 200) {
       throw Exception('Failed to create entry');
-    }
-  }
-
-  // SuperAdmin: Audit Logs
-  Future<List<AuditLog>> getAuditLogs() async {
-    final token = await getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/system/audit-logs'),
-      headers: _headers(token),
-    );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((item) => AuditLog.fromJson(item)).toList();
-    } else {
-      throw Exception('Failed to load audit logs');
-    }
-  }
-
-  // SuperAdmin: User Management
-  Future<List<SlaviaUser>> getUsers() async {
-    final token = await getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/admins'),
-      headers: _headers(token),
-    );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((item) => SlaviaUser.fromJson(item)).toList();
-    } else {
-      throw Exception('Failed to load users');
     }
   }
 
@@ -713,95 +588,6 @@ class ApiService {
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Failed to submit result');
     }
-  }
-
-  // SuperAdmin: User Actions
-  Future<void> createUser(
-    String username,
-    String password,
-    List<String> roles,
-  ) async {
-    final token = await getToken();
-    final response = await http.post(
-      Uri.parse('$baseUrl/api/admins'),
-      headers: _headers(token),
-      body: jsonEncode({
-        'username': username,
-        'password': password,
-        'roles': roles,
-      }),
-    );
-
-    if (response.statusCode != 201 && response.statusCode != 200) {
-      throw Exception('Failed to create user');
-    }
-  }
-
-  Future<void> deleteUser(String userId) async {
-    final token = await getToken();
-    final response = await http.delete(
-      Uri.parse('$baseUrl/api/admins/$userId'),
-      headers: _headers(token),
-    );
-
-    if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('Failed to delete user');
-    }
-  }
-
-  Future<void> updateUserRoles(String userId, List<String> roles) async {
-    final token = await getToken();
-    final response = await http.patch(
-      Uri.parse('$baseUrl/api/admins/$userId/role'),
-      headers: _headers(token),
-      body: jsonEncode({'roles': roles}),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to update roles');
-    }
-  }
-
-  // Athlete Management
-  Future<void> createAthlete(Map<String, dynamic> data) async {
-    final token = await getToken();
-    final response = await http.post(
-      Uri.parse('$baseUrl/api/athletes'),
-      headers: _headers(token),
-      body: jsonEncode(data),
-    );
-
-    if (response.statusCode != 201 && response.statusCode != 200) {
-      throw Exception('Failed to create athlete');
-    }
-    await _invalidateAthletesPublicCache();
-  }
-
-  Future<void> updateAthlete(String id, Map<String, dynamic> data) async {
-    final token = await getToken();
-    final response = await http.patch(
-      Uri.parse('$baseUrl/api/athletes/$id'),
-      headers: _headers(token),
-      body: jsonEncode(data),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('Failed to update athlete');
-    }
-    await _invalidateAthletesPublicCache();
-  }
-
-  Future<void> deleteAthlete(String id) async {
-    final token = await getToken();
-    final response = await http.delete(
-      Uri.parse('$baseUrl/api/athletes/$id'),
-      headers: _headers(token),
-    );
-
-    if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('Failed to delete athlete');
-    }
-    await _invalidateAthletesPublicCache();
   }
 
   // Image Upload
@@ -1356,65 +1142,44 @@ class ApiService {
       throw Exception('Failed to upsert attendance: ${response.body}');
     }
   }
-}
 
-class AuditLog {
-  final String id;
-  final String? actorUsername;
-  final String? actorRole;
-  final String category;
-  final String action;
-  final String? targetType;
-  final String? details;
-  final String createdAt;
-
-  AuditLog({
-    required this.id,
-    this.actorUsername,
-    this.actorRole,
-    required this.category,
-    required this.action,
-    this.targetType,
-    this.details,
-    required this.createdAt,
-  });
-
-  factory AuditLog.fromJson(Map<String, dynamic> json) {
-    return AuditLog(
-      id: json['id'],
-      actorUsername: json['actor_username'],
-      actorRole: json['actor_role'],
-      category: json['category'],
-      action: json['action'],
-      targetType: json['target_type'],
-      details: json['details'],
-      createdAt: json['created_at'],
+  // Trener AI (parity z WWW `/athlete/ai-coach`, `/trainer/ai-coach`)
+  Future<Map<String, dynamic>> getAiCoachStatus() async {
+    final token = await getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/ai/coach/status'),
+      headers: _headers(token),
     );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to load AI coach status');
   }
-}
 
-class SlaviaUser {
-  final String id;
-  final String username;
-  final String? email;
-  final List<String> roles;
-  final String? athleteId;
-
-  SlaviaUser({
-    required this.id,
-    required this.username,
-    this.email,
-    required this.roles,
-    this.athleteId,
-  });
-
-  factory SlaviaUser.fromJson(Map<String, dynamic> json) {
-    return SlaviaUser(
-      id: json['id'],
-      username: json['username'],
-      email: json['email'],
-      roles: List<String>.from(json['roles']),
-      athleteId: json['athlete_id'],
+  Future<String> sendAiCoachChat({
+    required String message,
+    String mode = 'chat',
+    List<Map<String, String>> history = const [],
+    String? athleteId,
+    bool? useAthleteContext,
+  }) async {
+    final token = await getToken();
+    final body = <String, dynamic>{
+      'message': message,
+      'mode': mode,
+      'history': history,
+      'athlete_id': ?athleteId,
+      'use_athlete_context': ?useAthleteContext,
+    };
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/ai/coach/chat'),
+      headers: _headers(token),
+      body: jsonEncode(body),
     );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return (data['reply'] as String?) ?? '';
+    }
+    throw Exception('AI coach chat failed: ${response.body}');
   }
 }

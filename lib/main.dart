@@ -10,6 +10,7 @@ import 'services/notification_timezone.dart';
 import 'services/push_notification_service.dart';
 import 'services/secure_credentials_store.dart';
 import 'screens/banned_screen.dart';
+import 'screens/browser_panel_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'models/auth.dart';
@@ -80,7 +81,15 @@ class _SlaviaAppState extends State<SlaviaApp> {
             } else if (authState.isBanned) {
               home = BannedScreen(reason: authState.bannedReason);
             } else {
-              home = const BiometricGate(child: MainScreen());
+              final user = context.read<AuthProvider>().user;
+              final roles = user?.roles ?? [];
+              final browserOnlyAdmin = (roles.contains('Admin') ||
+                      roles.contains('SuperAdmin')) &&
+                  !roles.contains('Athlete') &&
+                  !roles.contains('Trainer');
+              home = browserOnlyAdmin
+                  ? const BrowserPanelScreen()
+                  : const BiometricGate(child: MainScreen());
             }
             return MaterialApp(
               title: 'CKS Slavia',

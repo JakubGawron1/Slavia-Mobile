@@ -11,6 +11,7 @@ import '../models/athlete.dart';
 import '../models/chat.dart';
 import '../services/api_service.dart';
 import '../ui/slavia_ui.dart';
+import '../utils/chat_markdown.dart';
 /// Czat trener–zawodnik 1:1 (jak `/chat` na WWW).
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -703,7 +704,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                                     ),
                                                   ),
                                                 Text(
-                                                  m.body,
+                                                  plainChatMarkdown(m.body),
                                                   style: GoogleFonts.outfit(
                                                     fontSize: 14,
                                                     height: 1.35,

@@ -7,13 +7,9 @@ import 'proportions_calculator_page.dart';
 import 'athlete_training_plans_screen.dart';
 import 'trainer_training_plans_screen.dart';
 import 'training_log_screen.dart';
-import 'audit_log_screen.dart';
-import 'user_management_screen.dart';
 import 'athlete_portal_screen.dart';
-import 'superadmin_athlete_manager_screen.dart';
 import 'competition_assignment_screen.dart';
 import 'recovery_journal_screen.dart';
-import 'announcements_manage_screen.dart';
 import 'athlete_timeline_screen.dart';
 import 'club_posts_screen.dart';
 import 'club_gallery_screen.dart';
@@ -33,9 +29,6 @@ class CalculatorsPage extends StatelessWidget {
     final canTrainerPlans = roles.contains('Trainer') ||
         roles.contains('Admin') ||
         roles.contains('SuperAdmin');
-    final isClubAdmin =
-        roles.contains('Admin') || roles.contains('SuperAdmin');
-
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -194,56 +187,6 @@ class CalculatorsPage extends StatelessWidget {
                 Colors.deepOrange,
                 const TrainerTrainingPlansScreen(),
               ),
-          ],
-
-          // Administracja klubu — API wymaga Admin lub SuperAdmin
-          if (isClubAdmin) ...[
-            _sectionHeader(
-              'Administracja klubu',
-              Icons.admin_panel_settings_rounded,
-              Colors.deepOrange,
-            ),
-            _toolCard(
-              context,
-              'Zarządzanie ogłoszeniami',
-              'Tworzenie, szkice, publikacja — jak w panelu WWW.',
-              Icons.campaign_rounded,
-              Colors.orange,
-              const AnnouncementsManageScreen(),
-            ),
-            _toolCard(
-              context,
-              'Zarządzanie zawodnikami',
-              'Baza zawodników klubu i ich dane.',
-              Icons.people_rounded,
-              Colors.deepOrange,
-              const SuperAdminAthleteManagerScreen(),
-            ),
-          ],
-
-          // SuperAdmin tools
-          if (roles.contains('SuperAdmin')) ...[
-            _sectionHeader(
-              'SuperAdministracja',
-              Icons.security_rounded,
-              Colors.red,
-            ),
-            _toolCard(
-              context,
-              'Zarządzanie kadrą',
-              'Lista kont systemowych i uprawnień.',
-              Icons.supervisor_account_rounded,
-              Colors.red,
-              const UserManagementScreen(),
-            ),
-            _toolCard(
-              context,
-              'Logi systemowe',
-              'Historia zmian i audyt operacji.',
-              Icons.history_rounded,
-              Colors.deepPurple,
-              const AuditLogScreen(),
-            ),
           ],
 
           const SliverPadding(padding: EdgeInsets.only(bottom: 24)),

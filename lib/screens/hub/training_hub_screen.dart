@@ -10,6 +10,7 @@ import '../barbell_analysis_screen.dart';
 import '../calendar_screen.dart';
 import '../recovery_journal_screen.dart';
 import '../training_log_screen.dart';
+import '../ai_coach_screen.dart';
 import '../membership_payments_screen.dart';
 import '../trainer_training_plans_screen.dart';
 
@@ -144,6 +145,17 @@ class TrainingHubScreen extends StatelessWidget {
                     accent: Colors.cyan,
                     onTap: () => push(const CalendarScreen()),
                   ),
+                  const SizedBox(height: 10),
+                  SlaviaUi.hubTile(
+                    context,
+                    title: 'Trener AI',
+                    subtitle: 'Plan, suplementacja i regeneracja',
+                    icon: Icons.smart_toy_outlined,
+                    accent: Colors.purple,
+                    onTap: () => push(
+                      const AiCoachScreen(isTrainerView: false),
+                    ),
+                  ),
                   const SizedBox(height: 20),
                 ],
                 if (canTrainerPlans) ...[
@@ -169,6 +181,17 @@ class TrainingHubScreen extends StatelessWidget {
                     icon: Icons.show_chart_rounded,
                     accent: Colors.deepOrange,
                     onTap: () => push(const BarbellAnalysisScreen()),
+                  ),
+                  const SizedBox(height: 10),
+                  SlaviaUi.hubTile(
+                    context,
+                    title: 'Trener AI (kadra)',
+                    subtitle: 'Asystent dla trenera — plany i regeneracja',
+                    icon: Icons.smart_toy_outlined,
+                    accent: Colors.purple,
+                    onTap: () => push(
+                      const AiCoachScreen(isTrainerView: true),
+                    ),
                   ),
                 ],
                 if (!isAthlete && !canTrainerPlans)
