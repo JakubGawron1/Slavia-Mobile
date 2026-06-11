@@ -1,5 +1,26 @@
 # Changelog — Slavia Mobile
 
+## [0.9.111+111] — 2026-06-11 (tag `v0.9.111`)
+
+### Nowe funkcje
+- **Trener AI** — ekran czatu z asystentem (`AiCoachScreen`), markdown jak na WWW.
+- **Składki członkowskie** — wspólny ekran płatności dla zawodnika i trenera.
+- **Ekran zbanowanego konta** — przekierowanie po 403 z flagą banu.
+- **Ranking publiczny** i **wyzwania klubowe** — parity z witryną WWW.
+- **go_router** — trasy `/`, `/login`, `/banned`, `/browser-panel`, `/chat`, `/notifications`.
+- **FCM (fundament)** — stub `FcmService`; polling powiadomień bez regresji.
+
+### Ulepszenia
+- **Panel admin/SA** — usunięte ekrany WWW-only; konto bez roli Athlete/Trainer → `BrowserPanelScreen`.
+- **API** — podział `api_service` na moduły; flagi nawigacji panelu z backendu.
+- **Motywy** — presety z `@slavia/shared` (`theme_preset_catalog`).
+- **Hub treningowy / klubowy** — przebudowa nawigacji modułów (Fala 3).
+
+### Instalacja
+Pobierz APK z [GitHub Releases](https://github.com/JakubGawron1/Slavia-Mobile/releases) (tag `v0.9.111`) lub zsynchronizuj wydanie w panelu admina witryny.
+
+---
+
 ## [1.0.1+11] - 2026-05-19 (tag `v1.0.1-dev`)
 
 ### Naprawione

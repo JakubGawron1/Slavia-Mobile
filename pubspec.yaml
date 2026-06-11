@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 #
 # Android: `android/app/build.gradle.kts` — versionName z tagu Git (exact / najnowszy v*), versionCode z `git rev-list --count`.
 # iOS / PackageInfo: domyślnie ta sama linia `version` (fallback gdy Gradle nie buduje).
-version: 1.0.1+11
+version: 0.9.111+111
 
 environment:
   sdk: ^3.9.2
