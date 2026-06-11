@@ -11,6 +11,7 @@ import '../competition_assignment_screen.dart';
 import '../profile_page.dart';
 import '../sinclair_calculator_page.dart';
 import '../proportions_calculator_page.dart';
+import '../public_ranking_screen.dart';
 
 /// Zakładka „Więcej” — kalkulatory, kadra, administracja, profil.
 class MoreHubScreen extends StatelessWidget {
@@ -113,6 +114,15 @@ class MoreHubScreen extends StatelessWidget {
                   icon: Icons.handyman_outlined,
                   accent: Colors.blueGrey,
                   onTap: () => push(const CalculatorsPage()),
+                ),
+                const SizedBox(height: 10),
+                SlaviaUi.hubTile(
+                  context,
+                  title: 'Ranking publiczny',
+                  subtitle: 'Sinclair — elita klubu',
+                  icon: Icons.leaderboard_outlined,
+                  accent: Colors.deepOrange,
+                  onTap: () => push(const PublicRankingScreen()),
                 ),
                 if (isAthlete) ...[
                   const SizedBox(height: 20),

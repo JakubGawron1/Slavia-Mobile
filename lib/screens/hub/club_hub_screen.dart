@@ -8,8 +8,10 @@ import '../../models/announcement.dart';
 import '../../services/api_service.dart';
 import '../../ui/slavia_ui.dart';
 import '../announcement_page.dart';
+import '../club_challenges_screen.dart';
 import '../club_gallery_screen.dart';
 import '../club_posts_screen.dart';
+import '../public_ranking_screen.dart';
 
 /// Zakładka „Klub” — ogłoszenia, aktualności, galeria.
 class ClubHubScreen extends StatelessWidget {
@@ -196,6 +198,24 @@ class ClubHubScreen extends StatelessWidget {
                   icon: Icons.photo_library_outlined,
                   accent: Colors.indigo,
                   onTap: () => push(const ClubGalleryScreen()),
+                ),
+                const SizedBox(height: 10),
+                SlaviaUi.hubTile(
+                  context,
+                  title: 'Ranking Sinclair',
+                  subtitle: 'Publiczna lista elity — jak na stronie',
+                  icon: Icons.leaderboard_rounded,
+                  accent: Colors.deepOrange,
+                  onTap: () => push(const PublicRankingScreen()),
+                ),
+                const SizedBox(height: 10),
+                SlaviaUi.hubTile(
+                  context,
+                  title: 'Wyzwania klubu',
+                  subtitle: 'Aktywność w dzienniku treningów',
+                  icon: Icons.emoji_events_outlined,
+                  accent: Colors.purple,
+                  onTap: () => push(const ClubChallengesScreen()),
                 ),
                 if (AppBrand.hasPublicSite) ...[
                   const SizedBox(height: 10),
