@@ -43,11 +43,28 @@ class _ClubChallengesScreenState extends State<ClubChallengesScreen> {
     });
   }
 
+  String _formatValue(dynamic value) {
+    if (value == null) return '—';
+    if (value is num && _metric == 'tonnage') {
+      return value.toStringAsFixed(1);
+    }
+    return value.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Wyzwania klubu')),
+      appBar: AppBar(
+        title: const Text('Wyzwania klubu'),
+        actions: [
+          IconButton(
+            tooltip: 'Odśwież',
+            onPressed: _refresh,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(
@@ -98,7 +115,8 @@ class _ClubChallengesScreenState extends State<ClubChallengesScreen> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                     itemCount: leaderboard.length + 1,
-                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       if (index == 0) {
                         return Column(
@@ -122,21 +140,29 @@ class _ClubChallengesScreenState extends State<ClubChallengesScreen> {
                           ],
                         );
                       }
+                      final rank = index;
                       final row =
                           leaderboard[index - 1] as Map<String, dynamic>;
                       final name = row['full_name'] as String? ?? '—';
                       final value = _metric == 'tonnage'
                           ? row['tonnage_kg']
                           : row['session_count'];
+                      final label = _metric == 'tonnage'
+                          ? 'Tonaż: ${_formatValue(value)} kg'
+                          : 'Wpisy: ${_formatValue(value)}';
                       return Card(
                         child: ListTile(
-                          leading: CircleAvatar(child: Text('$index')),
-                          title: Text(name),
-                          subtitle: Text(
-                            _metric == 'tonnage'
-                                ? 'Tonaż: ${value ?? '—'} kg'
-                                : 'Wpisy: ${value ?? '—'}',
+                          leading: CircleAvatar(
+                            backgroundColor:
+                                cs.primary.withValues(alpha: 0.12),
+                            child: Text(
+                              '$rank',
+                              style:
+                                  GoogleFonts.outfit(fontWeight: FontWeight.w800),
+                            ),
                           ),
+                          title: Text(name),
+                          subtitle: Text(label),
                         ),
                       );
                     },

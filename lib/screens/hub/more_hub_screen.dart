@@ -3,7 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../main.dart';
+import '../../services/panel_navigation_service.dart';
 import '../../ui/slavia_ui.dart';
+import '../../utils/panel_navigation_catalog.dart';
 import '../athlete_list_screen.dart';
 import '../athlete_portal_screen.dart';
 import '../calculators_page.dart';
@@ -11,6 +13,7 @@ import '../competition_assignment_screen.dart';
 import '../profile_page.dart';
 import '../sinclair_calculator_page.dart';
 import '../proportions_calculator_page.dart';
+import '../club_challenges_screen.dart';
 import '../public_ranking_screen.dart';
 
 /// Zakładka „Więcej” — kalkulatory, kadra, administracja, profil.
@@ -19,13 +22,21 @@ class MoreHubScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = Provider.of<AuthProvider>(context);
-    final roles = auth.user?.roles ?? [];
-    final isAthlete = roles.contains('Athlete');
-    final isStaff = roles.any(
-      (r) => r == 'Trainer' || r == 'Admin' || r == 'SuperAdmin',
-    );
-    final primary = Theme.of(context).colorScheme.primary;
+    return Consumer<PanelNavigationService>(
+      builder: (context, panelNav, _) {
+        final auth = Provider.of<AuthProvider>(context);
+        final roles = auth.user?.roles ?? [];
+        final isAthlete = roles.contains('Athlete');
+        final isStaff = roles.any(
+          (r) => r == 'Trainer' || r == 'Admin' || r == 'SuperAdmin',
+        );
+        final primary = Theme.of(context).colorScheme.primary;
+        final rankingFlag = isStaff
+            ? PanelNavigationCatalog.trainerRanking
+            : PanelNavigationCatalog.athleteRanking;
+        final wyzwaniaFlag = isStaff
+            ? PanelNavigationCatalog.trainerWyzwania
+            : PanelNavigationCatalog.athleteWyzwania;
 
     void push(Widget page) {
       Navigator.push<void>(
@@ -116,14 +127,26 @@ class MoreHubScreen extends StatelessWidget {
                   onTap: () => push(const CalculatorsPage()),
                 ),
                 const SizedBox(height: 10),
-                SlaviaUi.hubTile(
-                  context,
-                  title: 'Ranking publiczny',
-                  subtitle: 'Sinclair — elita klubu',
-                  icon: Icons.leaderboard_outlined,
-                  accent: Colors.deepOrange,
-                  onTap: () => push(const PublicRankingScreen()),
-                ),
+                if (panelNav.isModuleEnabled(rankingFlag)) ...[
+                  SlaviaUi.hubTile(
+                    context,
+                    title: 'Ranking publiczny',
+                    subtitle: 'Sinclair — elita klubu',
+                    icon: Icons.leaderboard_outlined,
+                    accent: Colors.deepOrange,
+                    onTap: () => push(const PublicRankingScreen()),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                if (panelNav.isModuleEnabled(wyzwaniaFlag))
+                  SlaviaUi.hubTile(
+                    context,
+                    title: 'Wyzwania klubu',
+                    subtitle: 'Aktywność w dzienniku treningów',
+                    icon: Icons.emoji_events_outlined,
+                    accent: Colors.purple,
+                    onTap: () => push(const ClubChallengesScreen()),
+                  ),
                 if (isAthlete) ...[
                   const SizedBox(height: 20),
                   SlaviaUi.sectionHeader(
@@ -172,6 +195,8 @@ class MoreHubScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+      },
     );
   }
 }
