@@ -20,12 +20,16 @@ import 'training_log_screen.dart';
 import 'recovery_journal_screen.dart';
 import 'athlete_timeline_screen.dart';
 import 'athlete_achievements_screen.dart';
+import '../models/athlete_dashboard.dart';
 import '../models/club_post.dart';
+import '../utils/athlete_payment_kpi.dart';
 import '../utils/html_plain_text.dart';
+import 'attendance_qr_scan_screen.dart';
+import 'barbell_analysis_screen.dart';
+import 'membership_payments_screen.dart';
 import 'club_posts_screen.dart';
 import 'club_post_detail_screen.dart';
 import 'club_gallery_screen.dart';
-import 'barbell_analysis_screen.dart';
 
 String _primaryRoleLabel(List<String> roles) {
   if (roles.contains('SuperAdmin')) return 'SuperAdmin';
@@ -86,6 +90,18 @@ class DashboardPage extends StatelessWidget {
               ),
             ),
           ),
+
+          if (auth.user?.roles.contains('Athlete') == true &&
+              (auth.user?.athleteId ?? '').isNotEmpty)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+              sliver: SliverToBoxAdapter(
+                child: _AthleteDashboardKpiSection(
+                  apiService: apiService,
+                  primary: primary,
+                ),
+              ),
+            ),
 
           if (auth.user?.roles.contains('Athlete') == true &&
               (auth.user?.athleteId ?? '').isNotEmpty)
@@ -655,6 +671,258 @@ class _QuickAccessRow extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AthleteDashboardKpiSection extends StatefulWidget {
+  const _AthleteDashboardKpiSection({
+    required this.apiService,
+    required this.primary,
+  });
+
+  final ApiService apiService;
+  final Color primary;
+
+  @override
+  State<_AthleteDashboardKpiSection> createState() =>
+      _AthleteDashboardKpiSectionState();
+}
+
+class _AthleteDashboardKpiSectionState extends State<_AthleteDashboardKpiSection> {
+  late Future<AthleteDashboardResponse> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = widget.apiService.getAthleteMeDashboard();
+  }
+
+  void _reload() {
+    setState(() => _future = widget.apiService.getAthleteMeDashboard());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return FutureBuilder<AthleteDashboardResponse>(
+      future: _future,
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
+          return Row(
+            children: List.generate(
+              3,
+              (i) => Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(left: i == 0 ? 0 : 6),
+                  child: _KpiSkeleton(primary: widget.primary),
+                ),
+              ),
+            ),
+          );
+        }
+        if (snap.hasError || !snap.hasData) {
+          return Material(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(18),
+            child: InkWell(
+              onTap: _reload,
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: cs.error.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.refresh_rounded, color: cs.error, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Nie udało się wczytać KPI — dotknij, aby spróbować ponownie',
+                        style: GoogleFonts.outfit(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        final dash = snap.data!;
+        final payment = dash.paymentStatus;
+        final attendance = dash.attendanceSummary;
+        final pending = dash.pendingResultsCount;
+
+        final paymentKpi = payment != null
+            ? athletePaymentKpiFromStatus(payment)
+            : const AthletePaymentKpi(
+                value: '—',
+                hint: 'Brak danych',
+                tone: AthletePaymentKpiTone.info,
+              );
+        final paymentColor = athletePaymentKpiColor(
+          paymentKpi.tone,
+          cs,
+          widget.primary,
+        );
+
+        void push(Widget page) {
+          Navigator.push<void>(
+            context,
+            MaterialPageRoute<void>(builder: (_) => page),
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(
+              child: _DashboardKpiCard(
+                label: 'Składka',
+                value: paymentKpi.value,
+                hint: paymentKpi.hint,
+                icon: Icons.payments_outlined,
+                accent: paymentColor,
+                primary: widget.primary,
+                onTap: () => push(const MembershipPaymentsScreen()),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _DashboardKpiCard(
+                label: 'Frekwencja',
+                value: attendance != null
+                    ? '${attendance.attendancePercent.round()}%'
+                    : '—',
+                hint: attendance != null
+                    ? '${attendance.presentCount} obecności · ${attendance.absentCount} nieob.'
+                    : null,
+                icon: Icons.how_to_reg_outlined,
+                accent: widget.primary,
+                primary: widget.primary,
+                onTap: () => push(const AttendanceQrScanScreen()),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _DashboardKpiCard(
+                label: 'Wyniki oczek.',
+                value: '$pending',
+                hint: pending > 0 ? 'Do zatwierdzenia' : 'Brak oczekujących',
+                icon: Icons.pending_actions_outlined,
+                accent: pending > 0 ? Colors.amber.shade800 : cs.tertiary,
+                primary: widget.primary,
+                onTap: () => push(const AthletePortalScreen()),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _DashboardKpiCard extends StatelessWidget {
+  const _DashboardKpiCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.accent,
+    required this.primary,
+    this.hint,
+    this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final String? hint;
+  final IconData icon;
+  final Color accent;
+  final Color primary;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.surface,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: SlaviaUi.statCardDecoration(context, primary),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 18, color: accent),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: GoogleFonts.outfit(
+                  fontSize: 10,
+                  color: cs.onSurface.withValues(alpha: 0.55),
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                value,
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: cs.onSurface,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (hint != null && hint!.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  hint!,
+                  style: GoogleFonts.outfit(
+                    fontSize: 9,
+                    color: cs.onSurface.withValues(alpha: 0.5),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _KpiSkeleton extends StatelessWidget {
+  const _KpiSkeleton({required this.primary});
+
+  final Color primary;
+
+  @override
+  Widget build(BuildContext context) {
+    final base = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.06);
+    return Container(
+      height: 96,
+      decoration: BoxDecoration(
+        color: base,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: primary.withValues(alpha: 0.08)),
       ),
     );
   }

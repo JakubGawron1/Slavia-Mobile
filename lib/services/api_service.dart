@@ -18,6 +18,7 @@ import '../models/attendance_summary.dart';
 import '../models/club_post.dart';
 import '../models/gallery_photo.dart';
 import '../models/payment.dart';
+import '../models/athlete_dashboard.dart';
 import '../config/api_base.dart';
 import 'dart:async';
 
@@ -207,6 +208,25 @@ class ApiService {
     } else {
       throw Exception('Failed to load athlete');
     }
+  }
+
+  /// Agregowany dashboard zawodnika — jeden round-trip zamiast wielu GET (parity WWW `/athlete`).
+  Future<AthleteDashboardResponse> getAthleteMeDashboard({String? month}) async {
+    final token = await getToken();
+    final q = month == null ? '' : '?month=${Uri.encodeQueryComponent(month)}';
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/athletes/me/dashboard$q'),
+      headers: _headers(token),
+    );
+
+    if (response.statusCode == 200) {
+      return AthleteDashboardResponse.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+    throw Exception(
+      'Failed to load athlete dashboard: ${response.statusCode}',
+    );
   }
 
   Future<AttendanceSummary> getAttendanceSummary(String athleteId) async {
