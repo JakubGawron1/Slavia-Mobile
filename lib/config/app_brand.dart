@@ -1,4 +1,4 @@
-import 'package:slavia_shared/brand_defaults.dart';
+import 'brand_defaults.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Publiczny frontend Nuxt. Domyślnie produkcja: https://cksslavia.vercel.app/

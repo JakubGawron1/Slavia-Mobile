@@ -27,18 +27,15 @@ Workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) buduje
 
 Artefakt domyślny: `build/app/outputs/flutter-apk/app-release.apk` — strona klubu może linkować do najnowszego release przez API (patrz `NUXT_PUBLIC_MOBILE_GITHUB_REPO` w repozytorium frontendu).
 
-## Slavia-shared
+## Backend i katalogi
 
-Lokalnie: osobny klon `../Slavia-shared` (ten sam co WWW). Produkcja WWW używa submodule w frontendzie.
+Aplikacja mobilna łączy się z tym samym API co WWW (`../Slavia-backend`).
 
-```
-Desktop/
-  Slavia-shared/        ← edycja shared
-  Slavia-mobile/        → path: ../Slavia-shared/dart
-```
+- Katalogi (presety motywu, odznaki): `GET /api/system/*` przy starcie
+- Logika lokalna: `lib/utils/sinclair.dart`, `badge_helpers.dart`, `weightlifting_ratios.dart`
+- Test wektorowy Sinclair: `flutter test test/sinclair_vector_test.dart`
 
-- testy wektorów: `cd ../Slavia-shared/dart && flutter test`
-- **CI (Release APK):** shallow clone `main` z `JakubGawron1/Slavia-shared` (zawsze latest commit)
+Domyślny URL API: `lib/config/brand_defaults.dart` (nadpisanie: `--dart-define=SLAVIA_API_BASE=...`).
 
 ## Spójność z frontendem (WWW)
 

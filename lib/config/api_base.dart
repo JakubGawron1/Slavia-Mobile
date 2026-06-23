@@ -1,4 +1,4 @@
-import 'package:slavia_shared/brand_defaults.dart';
+import '../config/brand_defaults.dart';
 
 /// Bazowy URL API (bez końcowego `/`).
 /// Nadpisz przy buildzie / run: `--dart-define=SLAVIA_API_BASE=https://twoj-backend.example.com`

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:slavia_shared/athlete_badge_catalog.dart';
-import 'package:slavia_shared/badge_helpers.dart';
+import 'athlete_badge_catalog.dart';
+import 'badge_helpers.dart';
 
 import '../models/athlete.dart';
 import 'sinclair_utils.dart';
 
-/// Odznaki zawodnika — metadane z `@slavia/shared`, logika poziomów współdzielona.
+/// Odznaki zawodnika — metadane z API backendu (fallback lokalny).
 class AthleteBadgeDef {
   final String id;
   final String label;

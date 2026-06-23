@@ -15,6 +15,7 @@ import 'routing/app_router.dart';
 import 'models/auth.dart';
 import 'services/panel_navigation_service.dart';
 import 'utils/theme_preset_catalog.dart';
+import 'utils/slavia_catalogs.dart';
 import 'utils/theme_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -23,6 +24,7 @@ void main() async {
   await initializeDateFormatting('pl_PL', null);
   await ensureLocalTimezoneInitialized();
   await ThemePresetCatalog.ensureLoaded();
+  await hydrateAthleteBadgeCatalogFromApi();
   final prefs = await SharedPreferences.getInstance();
   final themeProvider = ThemeProvider(prefs);
   final apiService = ApiService();

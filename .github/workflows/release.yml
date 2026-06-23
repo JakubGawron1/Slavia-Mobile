@@ -33,15 +33,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # pubspec: path ../Slavia-shared/dart — sibling poza GITHUB_WORKSPACE (git clone, nie actions/checkout path).
-      - name: Checkout Slavia-shared (latest main)
-        run: |
-          DEST="${GITHUB_WORKSPACE}/../Slavia-shared"
-          rm -rf "$DEST"
-          git clone --depth 1 --branch main https://github.com/JakubGawron1/Slavia-shared.git "$DEST"
-          echo "Slavia-shared @ $(git -C "$DEST" rev-parse HEAD)"
-          test -f "$DEST/dart/pubspec.yaml"
-
       - name: Flutter
         uses: subosito/flutter-action@v2
         with:

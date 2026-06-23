@@ -1,1 +1,1 @@
-export 'package:slavia_shared/sinclair.dart';
+export 'sinclair.dart';
